@@ -1,0 +1,25 @@
+experiment:
+  id: linear_probe_nucls_mipheivit_20x_s32
+  head: linear_probe
+  dataset: nucls
+  model: mipheivit
+  target_mpp: 0.5
+  target_patch_size: 32
+  target_features:
+  - z4
+  use_gap: true
+  description: NuCLS MIPHEI-ViT z4 GAP encoder features
+masks:
+  save: false
+run:
+  feat_dir: Pre_Features/linear_probe_nucls_mipheivit_20x_s32/encoder_z4
+  batch_size: 64
+  feature_storage: split_h5
+  input_format: manifest
+  iterator_cpus: 1
+  use_benchmark_config: true
+  benchmark_config_path: configs/benchmark_models.yaml
+  fallback_mpp: 0.5
+  feature_dtype: float16
+  mask_dtype: uint8
+  num_workers: 1

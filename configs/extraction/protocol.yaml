@@ -1,0 +1,107 @@
+# Canonical Pre_Features extraction protocol.
+# Consumed by `python -m feature_extraction.extract`.
+# One entry point; this file controls which layers and which split layout to write.
+
+layout: "{run_id}/encoder_{layer}|output_layers/{train,valid,test|fold_k/{train,valid,test}}"
+
+models:
+  uni2:
+    encoder: z4
+    output: null
+    linear_probe:
+      target_mpp: 0.5
+      target_patch_size: 32
+      tag: 20x_s32
+    wsi:
+      target_mpp: 0.5
+      target_patch_size: 224
+      tag: 20x_s224
+  mipheivit:
+    encoder: z4
+    output: mif
+    linear_probe:
+      target_mpp: 0.5
+      target_patch_size: 32
+      tag: 20x_s32
+    wsi:
+      target_mpp: 0.5
+      target_patch_size: 256
+      tag: 20x_s256
+  hemit:
+    encoder: resnet_blocks
+    output: mif
+    linear_probe:
+      target_mpp: 0.25
+      target_patch_size: 64
+      tag: 40x_s64
+    wsi:
+      target_mpp: 0.25
+      target_patch_size: 1024
+      tag: 40x_s1024
+  histoplexer:
+    encoder: bottleneck
+    output: mif
+    linear_probe:
+      target_mpp: 0.25
+      target_patch_size: 64
+      tag: 40x_s64
+    wsi:
+      target_mpp: 0.25
+      target_patch_size: 1024
+      tag: 40x_s1024
+  gigatime:
+    encoder: x4_0
+    output: mif
+    linear_probe:
+      target_mpp: 0.5
+      target_patch_size: 32
+      tag: 20x_s32
+    wsi:
+      target_mpp: 0.5
+      target_patch_size: 256
+      tag: 20x_s256
+  rosie:
+    encoder: stage3
+    output: mif0
+    linear_probe:
+      target_mpp: 0.25
+      target_patch_size: 64
+      tag: 40x_s64
+    wsi:
+      target_mpp: 0.25
+      target_patch_size: 128
+      tag: 40x_s128
+
+datasets:
+  immunocto:
+    kind: linear_probe
+    splits: [train, valid, test]
+    online: false
+  nucls:
+    kind: linear_probe
+    splits: [train, valid, test]
+    online: false
+  tcga_coad:
+    kind: wsi_cv
+    n_folds: 5
+    valid_equals_test: true
+    fold_csv: ../splits/prognosis_os/tcga_coad_split_shazam_fold{fold}.csv
+    online: false
+  tcga_luad:
+    kind: wsi_cv
+    n_folds: 5
+    valid_equals_test: true
+    fold_csv: ../splits/prognosis_os/tcga_luad_split_cv5_os_balanced_fold{fold}.csv
+    online: false
+  hooknet_tls:
+    kind: online
+    online: true
+  pathocell:
+    kind: online
+    online: true
+  lizard:
+    kind: online
+    online: true
+  cell_niches:
+    kind: online
+    online: true

@@ -1,0 +1,25 @@
+experiment:
+  id: linear_probe_immunocto_gigatime_20x_s32
+  head: linear_probe
+  dataset: immunocto
+  model: gigatime
+  target_mpp: 0.5
+  target_patch_size: 32
+  target_features:
+  - x4_0
+  use_gap: true
+  description: Linear probe on ImmunOcto with GigaTIME x4_0 GAP features
+masks:
+  save: false
+run:
+  feat_dir: Pre_Features/linear_probe_immunocto_gigatime_20x_s32/encoder_x4_0
+  batch_size: 16
+  feature_storage: split_h5
+  input_format: webdataset
+  wds_root: /data3/houjunlin/fxx/datasets/immunocto_wds
+  iterator_cpus: 8
+  use_benchmark_config: true
+  benchmark_config_path: configs/benchmark_models.yaml
+  fallback_mpp: 0.5
+  feature_dtype: float16
+  mask_dtype: uint8

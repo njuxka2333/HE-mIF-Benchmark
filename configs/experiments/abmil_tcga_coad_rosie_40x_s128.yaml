@@ -1,0 +1,21 @@
+experiment:
+  id: abmil_tcga_coad_rosie_40x_s128
+  head: abmil
+  dataset: tcga_coad
+  model: rosie
+  target_mpp: 0.25
+  target_patch_size: 128
+  target_features:
+  - stage3
+  description: abmil on tcga_coad with ROSIE stage3 at 40x
+masks:
+  save: false
+run:
+  feat_dir: Pre_Features/abmil_tcga_coad_rosie_40x_s128/encoder_stage3
+  feature_storage: patch_h5
+  batch_size: 32
+  use_benchmark_config: true
+  benchmark_config_path: configs/benchmark_models.yaml
+  fallback_mpp: 0.25
+  feature_dtype: float16
+  mask_dtype: uint8

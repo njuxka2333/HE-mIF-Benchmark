@@ -1,0 +1,45 @@
+evaluation:
+  id: linear_probe_nucls_output_gigatime
+  task: single_cell_classification
+  dataset: linear_probe_features
+  head: linear_probe
+data:
+  feature_experiment_config: configs/experiments/linear_probe_nucls_gigatime_20x_s32_mif.yaml
+  feature_layer: mif
+  train_split: train
+  valid_split: valid
+  test_split: test
+head: {}
+training:
+  seed: 42
+  device: cuda
+  batch_size: 16384
+  eval_batch_size: 262144
+  max_epochs: 33
+  evaluate_test: true
+  feature_normalize: zscore_train
+  combine_trainval: false
+  weighted_sample: false
+  primary_metric: macro_f1
+  primary_metric_mode: max
+  early_stopping_patience: 0
+  early_stopping_min_delta: 0.0
+  early_stopping_start_epoch: 0
+  checkpoint_select_metric: valid_macro_f1
+  optimizer:
+    name: AdamW
+    params:
+      lr: 0.01
+      weight_decay: 1.0e-05
+  scheduler:
+    name: CosineAnnealingLR
+    params:
+      T_max: 50
+      eta_min: 0.0
+  verbose: false
+  evaluate_test_each_epoch: false
+  torch_num_threads: 2
+metrics: {}
+survival: {}
+run:
+  output_dir: ../Evaluation/linear_probe/nucls/output/gigatime

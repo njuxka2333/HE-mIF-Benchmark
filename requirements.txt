@@ -1,0 +1,22 @@
+# Python deps for HE-mIF-Benchmark (install a CUDA PyTorch wheel first).
+numpy
+pandas
+pyyaml
+pillow
+tifffile
+opencv-python-headless
+tqdm
+scikit-learn
+scipy
+matplotlib
+h5py
+python-dotenv
+huggingface_hub
+safetensors
+timm
+torch
+torchvision
+pytest
+shapely
+openslide-python
+einops

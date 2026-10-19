@@ -1,0 +1,49 @@
+# Canonical UNETR encoder-skip interfaces (Phase 1C architecture corrections).
+uni2:
+  default:
+    target_features: [z1, z2, z3, z4]
+    raw_channels: [1536, 1536, 1536, 1536]
+    geometry: equal_grid
+    feature_processor: cellvit_pyramid
+rosie:
+  default:
+    target_features: [stage0, stage1, stage2, stage3]
+    raw_channels: [96, 192, 384, 768]
+    geometry: strict_dyadic
+    feature_processor: null
+mipheivit:
+  default:
+    target_features: [z1, z2, z3, z4]
+    raw_channels: [1536, 1536, 1536, 1536]
+    geometry: equal_grid
+    feature_processor: cellvit_pyramid
+miphei:
+  default:
+    target_features: [z1, z2, z3, z4]
+    raw_channels: [1536, 1536, 1536, 1536]
+    geometry: equal_grid
+    feature_processor: cellvit_pyramid
+hemit:
+  default:
+    target_features: [fused_z1, fused_z2, fused_z3, z4]
+    raw_channels: [128, 256, 512, 512]
+    geometry: deepest_plateau
+    feature_processor: null
+hemmit:
+  default:
+    target_features: [fused_z1, fused_z2, fused_z3, z4]
+    raw_channels: [128, 256, 512, 512]
+    geometry: deepest_plateau
+    feature_processor: null
+histoplexer:
+  default:
+    target_features: [z3, z4, z5, z6]
+    raw_channels: [64, 128, 256, 256]
+    geometry: strict_dyadic
+    feature_processor: null
+gigatime:
+  default:
+    target_features: [x0_0, x1_0, x2_0, x3_0, x4_0]
+    raw_channels: [32, 64, 128, 256, 512]
+    geometry: strict_dyadic
+    feature_processor: null

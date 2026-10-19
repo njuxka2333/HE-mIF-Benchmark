@@ -1,0 +1,328 @@
+# HE-mIF-Benchmark encoder baselines and their native preprocessing.
+# Values follow model papers and upstream repos (ROSIE, Pix2pix_DualBranch/HEMIT,
+# GigaTIME, MIPHEI-ViT, HistoPlexer).  When paper and released code differ,
+# paper-native geometry is recorded here and the repo behavior is noted in extra.
+#
+# Checkpoints: Hugging Face Hub is preferred. Files that are not on Hub go in
+# <repo>/checkpoints/ (or $HE_MIF_CKPT_DIR). See the top-level README.
+#   checkpoint_path  — filename under checkpoints/, or an absolute path
+#   hub              — Hugging Face (repo_id + filename) or a direct artifact url
+#                        hub:
+#                          repo_id: org/model-weights
+#                          filename: model.pth
+#                          revision: main
+
+models:
+  rosie:
+    aliases: [rosie]
+    repo: rosie
+    checkpoint_key: rosie
+    checkpoint_path: rosie_best_model_single.pth
+    loader: benchmark_wrapper
+    wrapper_module: models.rosie_inference
+    batch_size_default: 32
+    norm:
+      norm_type: imagenet_01
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    spatial:
+      # Official ROSIE geometry: 128x128 H&E context, resized to 224 for ConvNeXt.
+      native_input_size: 256
+      context_patch_size: 128
+      resize_to: 224
+      allow_variable_hw: true
+    mpp:
+      target_mpp: null
+      # ROSIE paper describes standard 40x H&E scanning for its native context.
+      fallback_mpp: 0.25
+      resolution_key: "40x"
+    output:
+      native_type: dense_spatial
+      channels: 50
+    postprocess:
+      name: gaussian_splat
+      params:
+        stride: 8
+        num_channels: 50
+    heads:
+      linear_probe:
+        enabled: true
+        layer_hint: convnext_stage3_gap
+        notes: "768-d GAP after features[7]; skip 50-d marker head for classification."
+      abmil:
+        enabled: true
+        layer_hint: convnext_stage3_gap
+        notes: "Same 768-d embedding per patch in slide bag."
+      unetr:
+        enabled: true
+        layer_hint: convnext_stages_1_3_5_7_plus_stem
+        notes: "CNN pyramid decoder; not ViT PFMB template."
+
+  hemit:
+    aliases: [hemit, hemmit]
+    repo: HEMIT/Pix2pix_DualBranch
+    checkpoint_key: hemmit
+    checkpoint_path: hemit_v1.pth
+    loader: benchmark_wrapper
+    wrapper_module: models.hemmit_inference
+    batch_size_default: 4
+    norm:
+      norm_type: pix2pix_01
+      mean: [0.5, 0.5, 0.5]
+      std: [0.5, 0.5, 0.5]
+    spatial:
+      # HEMIT paper/repo: 1024x1024 paired H&E/mIHC patches.
+      native_input_size: 1024
+      allow_variable_hw: true
+    mpp:
+      target_mpp: null
+      fallback_mpp: 0.25
+      resolution_key: "40x"
+    output:
+      native_type: dense_spatial
+      channels: 3
+      activation: tanh
+    postprocess:
+      name: identity
+    heads:
+      linear_probe:
+        enabled: true
+        layer_hint: resnet_blocks_gap
+        notes: "512-d GAP on the deepest fused CNN/Swin pre-decoder map (fused_z3), exposed under the compatibility key resnet_blocks."
+      abmil:
+        enabled: true
+        layer_hint: resnet_blocks_gap
+        notes: "Same fused_z3 GAP representation and compatibility key as linear_probe."
+      unetr:
+        enabled: true
+        layer_hint: dual_branch_fused_pyramid_z1_z4
+        notes: "Released decoder hierarchy: fused_z1-fused_z3 from cross-attention plus z4 bottleneck. CNN-only z1-z4 is legacy."
+
+  gigatime:
+    aliases: [gigatime]
+    repo: GigaTIME
+    checkpoint_key: gigatime
+    checkpoint_path: gigatime.pth
+    hub:
+      repo_id: prov-gigatime/GigaTIME
+      filename: model.pth
+      revision: main
+    loader: benchmark_wrapper
+    wrapper_module: models.gigatime_inference
+    batch_size_default: 16
+    norm:
+      norm_type: imagenet_01
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    spatial:
+      # GigaTIME paper-native WSI inference: 256x256 patches from 128x128 um.
+      # Released README uses a 512x512 canvas with a 256px sliding/crop window;
+      # the effective model patch for benchmark extraction is therefore 256px.
+      native_input_size: 256
+      window_size: 256
+      allow_variable_hw: true
+    mpp:
+      target_mpp: null
+      fallback_mpp: 0.5
+      resolution_key: "20x"
+    output:
+      native_type: dense_spatial
+      channels: 23
+    postprocess:
+      name: tile_stitch
+      params:
+        window_size: 256
+    extra:
+      released_repo_canvas_size: 512
+      released_repo_window_size: 256
+      paper_native_input_size: 256
+      paper_native_mpp: 0.5
+      paper_reported_channels: 21
+      released_repo_channels: 23
+    heads:
+      linear_probe:
+        enabled: true
+        layer_hint: x4_0_gap
+        notes: "512-d GAP on U-Net++ down column x4_0."
+      abmil:
+        enabled: true
+        layer_hint: x4_0_gap
+      unetr:
+        enabled: true
+        layer_hint: unetpp_down_x0_0_to_x4_0
+        notes: "Official U-Net++ down column x0_0-x4_0 plus FeatureUNETR decoder-side RGB z0. Legacy G0 (x1-x4 only) superseded Phase 1C."
+
+  mipheivit:
+    aliases: [mipheivit, miphei]
+    repo: MIPHEI-ViT
+    checkpoint_key: mipheivit
+    checkpoint_path: mipheivit.safetensors
+    hub:
+      url: https://github.com/Sanofi-Public/MIPHEI-ViT/releases/download/v1.0.0/model.safetensors
+      filename: model.safetensors
+    loader: benchmark_wrapper
+    wrapper_module: models.mipheivit_inference
+    batch_size_default: 4
+    norm:
+      norm_type: imagenet_01
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    spatial:
+      # MIPHEI paper benchmark: OrionCRC 256x256 tiles at 0.5 mpp.
+      # Released WSI inference script defaults to tile_size=512 at 0.5 mpp.
+      native_input_size: 256
+      allow_variable_hw: true
+    mpp:
+      target_mpp: null
+      fallback_mpp: 0.5
+      resolution_key: "20x"
+    output:
+      native_type: dense_spatial
+      channels: 16
+      activation: tanh
+    postprocess:
+      name: identity
+    extra:
+      encoder_name: hoptimus0
+      # Gated on HF; foundation weights load via timm inside MIPHEI reference code.
+      foundation_hub:
+        repo_id: bioptimus/H-optimus-0
+        filename: model.safetensors
+        revision: main
+      num_classes: 16
+      use_lora: true
+      img_size: 256
+      released_wsi_tile_size: 512
+      paper_native_input_size: 256
+      paper_native_mpp: 0.5
+    heads:
+      linear_probe:
+        enabled: true
+        layer_hint: z4_gap
+        notes: "GAP on the final H-Optimus-0 ViT block map. The wrapper's encoder map is exposed for debugging only, not the benchmark default."
+      abmil:
+        enabled: true
+        layer_hint: z4_gap
+        notes: "Same z4 GAP embedding per patch in slide bag."
+      unetr:
+        enabled: true
+        layer_hint: vit_last_four_blocks
+        notes: "Production TLS still uses legacy z1-z4 (same 18x18 grid). Recommended M1 hybrid D1,D2,D3,encoder NOT merged pending architecture review sign-off."
+
+  uni2:
+    aliases: [uni2, uni-2]
+    repo: ""  # UNI2-h loads from Hugging Face (MahmoodLab/UNI2-h); no code checkout.
+    checkpoint_key: uni2
+    checkpoint_path: uni2_pytorch_model.bin
+    hub:
+      repo_id: MahmoodLab/UNI2-h
+      filename: pytorch_model.bin
+      revision: main
+    loader: benchmark_wrapper
+    wrapper_module: models.uni2_inference
+    batch_size_default: 16
+    norm:
+      norm_type: imagenet_01
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    spatial:
+      # The installed UNI2 wrapper is built as vit_giant_patch14_224.
+      # Keep sampler RGB/masks and encoder input at the same 224 px geometry.
+      native_input_size: 224
+      allow_variable_hw: false
+    mpp:
+      target_mpp: null
+      fallback_mpp: 0.5
+      resolution_key: "20x"
+    output:
+      native_type: dense_spatial
+      channels: 1536
+      embedding_dim: 1536
+    postprocess:
+      name: identity
+    extra:
+      hf_model_id: MahmoodLab/UNI2-h
+      img_size: 224
+      patch_size: 14
+      reg_tokens: 8
+      embed_dim: 1536
+    heads:
+      linear_probe:
+        enabled: true
+        layer_hint: z4_gap
+        notes: "GAP over UNI2 final spatial map after removing CLS/register tokens."
+      abmil:
+        enabled: true
+        layer_hint: z4_gap
+      unetr:
+        enabled: true
+        layer_hint: uni2_last4_z1_z4
+        notes: "PFMB-style features_only=True last four feature maps; no raw RGB z0."
+
+  histoplexer:
+    aliases: [histoplexer]
+    repo: HistoPlexer
+    checkpoint_key: histoplexer
+    checkpoint_path: histoplexer.pt
+    loader: benchmark_wrapper
+    wrapper_module: models.histoplexer_inference
+    batch_size_default: 1
+    norm:
+      norm_type: none
+      mean: [0.0, 0.0, 0.0]
+      std: [1.0, 1.0, 1.0]
+    spatial:
+      # HistoPlexer demo checkpoint: high-resolution H&E mode with 256 IMC patch target.
+      native_input_size: 1024
+      allow_variable_hw: false
+    mpp:
+      target_mpp: null
+      fallback_mpp: 0.25
+      resolution_key: "40x"
+    output:
+      native_type: dense_spatial
+      channels: 256
+      embedding_dim: 256
+    postprocess:
+      name: identity
+    extra:
+      img_size: 1024
+      imc_patch_size: 256
+      generated_markers:
+      - CD16
+      - CD20
+      - CD3
+      - CD31
+      - CD8a
+      - gp100
+      - HLA-ABC
+      - HLA-DR
+      - MelanA
+      - S100
+      - SOX10
+    heads:
+      linear_probe:
+        enabled: true
+        layer_hint: bottleneck_gap
+        notes: "GAP over center_block.0 / bottleneck, producing a 256-d embedding."
+      abmil:
+        enabled: true
+        layer_hint: bottleneck_gap
+      unetr:
+        enabled: true
+        layer_hint: encoder_pyramid_z3_z6
+        notes: "Frozen HistoPlexer encoder pyramid z3-z6. Legacy baseline z2-z5 retained in configs/model_unetr_interfaces.yaml. PathoCell/HookNet-TLS use decoder-side RGB z0."
+
+output_layouts:
+  prepath_legacy:
+    description: "Original PrePATH feature_extraction/run_fp_fast.py layout"
+    paths:
+      features: "{feat_dir}/pt_files/{model}/{slide_id}.pt"
+      coords: "{feat_dir}/h5_files/{model}/{slide_id}.h5"
+  benchmark_v1:
+    description: "Proposed layout for multi-head / spatial exports"
+    paths:
+      features: "{feat_dir}/{model}/embeddings/{slide_id}.pt"
+      spatial: "{feat_dir}/{model}/spatial/{slide_id}.pt"
+      coords: "{feat_dir}/{model}/metadata/{slide_id}.h5"
+      manifest: "{feat_dir}/{model}/manifest.json"

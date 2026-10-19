@@ -1,0 +1,4 @@
+# HookNet-TLS fixed-grid manifest construction (split-level Rest subsampling).
+# 0.01 (~1% of Rest candidates); positives kept in full
+rest_keep_fraction: 0.01
+random_seed: 42

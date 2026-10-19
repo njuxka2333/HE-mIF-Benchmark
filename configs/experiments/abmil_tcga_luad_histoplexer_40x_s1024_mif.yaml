@@ -1,0 +1,21 @@
+experiment:
+  id: abmil_tcga_luad_histoplexer_40x_s1024_mif
+  head: abmil
+  dataset: tcga_luad
+  model: histoplexer
+  target_mpp: 0.25
+  target_patch_size: 1024
+  target_features:
+  - mif
+  description: abmil on tcga_luad with histoplexer mif virtual-stain bag
+masks:
+  save: false
+run:
+  feat_dir: Pre_Features/abmil_tcga_luad_histoplexer_40x_s1024/output_layers
+  feature_storage: patch_h5
+  batch_size: 8
+  use_benchmark_config: true
+  benchmark_config_path: configs/benchmark_models.yaml
+  fallback_mpp: 0.25
+  feature_dtype: float16
+  mask_dtype: uint8

@@ -1,0 +1,35 @@
+# Local scratch — not part of a GitHub clone
+
+**/.DS_Store
+**/__pycache__/
+**/.pytest_cache/
+*.log
+*.out
+*.err
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.npy
+.env
+.specstory/
+
+# Runtime / prep artifacts — do not git add
+checkpoints/
+Pre_Features/
+results/
+results_treatment_response/
+Evaluation/
+logs/
+
+# Upstream model checkouts cloned into this directory (see README)
+/rosie/
+/GigaTIME/
+/MIPHEI-ViT/
+/HistoPlexer/
+/HEMIT/
+/ASlide/
+
+# Over GitHub's 100 MB file limit; compressed twins are tracked
+splits/single_cell_cls/immunocto/cell_index.csv
+splits/single_cell_cls/immunocto/immunocto_train_other_excluded.csv

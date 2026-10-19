@@ -1,0 +1,26 @@
+# Frozen CLAM coordinate protocol for prognosis.
+# Matches the process_list used to write {dataset}/patches/{slide}.h5.
+# Git does not store those h5 files; run `python -m preprocessing.build`.
+
+patch_size: 512
+step_size: 512
+patch_level: 0
+seg:
+  seg_level: -1
+  sthresh: 4
+  mthresh: 7
+  close: 4
+  use_otsu: true
+  sthresh_up: 255
+  keep_ids: none
+  exclude_ids: none
+filter:
+  a_t: 1
+  a_h: 1
+  max_n_holes: 64
+patch:
+  use_padding: true
+  contour_fn: four_pt
+datasets:
+  - tcga_coad
+  - tcga_luad

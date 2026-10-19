@@ -1,0 +1,150 @@
+# Dataset registry for the reported benchmark.
+# TLS / PathoCell / Lizard / Cell-niches train online (no Pre_Features bags).
+datasets:
+  pathocell:
+    dataset_dir: /data3/houjunlin/fxx/datasets/PathoCell
+    mask_dir: null
+    split: splits/cell_semantic_seg/phenocell_dataset_split.csv
+    split_level: slide
+    label_dict: data/phenocell/label_dict.json
+    mode: patch_hdf
+    hdf_subdir: pathocell_hdf
+    glob: '*.hdf'
+    native_mpp: 0.377
+    columns:
+      case_id: sample_name
+      sample_id: sample_name
+      split: train_test_val_split
+      label: label
+      image: file_path
+  pathocell_online:
+    dataset_dir: /data3/houjunlin/fxx/datasets/PathoCell
+    mask_dir: null
+    split: splits/cell_semantic_seg/phenocell_dataset_split.csv
+    split_level: slide
+    label_dict: data/phenocell/label_dict.json
+    mode: patch_hdf
+    hdf_subdir: pathocell_hdf
+    glob: '*.hdf'
+    native_mpp: 0.377
+    columns:
+      case_id: sample_name
+      sample_id: sample_name
+      split: train_test_val_split
+      label: label
+      image: file_path
+  lizard:
+    dataset_dir: /data3/houjunlin/fxx/datasets/lizard
+    mask_dir: null
+    split: splits/cell_semantic_seg/lizard_split.csv
+    split_level: slide
+    label_dict: lizard_label_dict.json
+    mode: patch_hdf
+    hdf_subdir: pathocell_hdf
+    glob: '*.hdf'
+    native_mpp: 0.5
+    columns:
+      case_id: sample_name
+      sample_id: sample_name
+      split: train_test_val_split
+      label: label
+      image: file_path
+  lizard_online:
+    dataset_dir: /data3/houjunlin/fxx/datasets/lizard
+    mask_dir: null
+    split: splits/cell_semantic_seg/lizard_split.csv
+    split_level: slide
+    label_dict: lizard_label_dict.json
+    mode: patch_hdf
+    hdf_subdir: pathocell_hdf
+    glob: '*.hdf'
+    native_mpp: 0.5
+    columns:
+      case_id: sample_name
+      sample_id: sample_name
+      split: train_test_val_split
+      label: label
+      image: file_path
+  hooknet_tls:
+    dataset_dir: /data3/houjunlin/fxx/datasets/HookNet_TLS
+    mask_dir: /data3/houjunlin/fxx/datasets/HookNet_TLS/masks
+    split: splits/tls_seg/hooknet-tls_split.csv
+    split_level: slide
+    label_dict: label_dict.json
+    mode: wsi
+    wsi_subdir: WSIs
+    annotations_subdir: annotations
+    slide_ext: .svs
+    columns:
+      sample_id: slide_id
+      split: split
+      label: label
+      image: wsi_path
+      mask: mask_path
+  tcga_luad:
+    dataset_dir: /data3/houjunlin/fxx/datasets/TCGA_LUAD
+    mask_dir: null
+    split: splits/prognosis_os/tcga_luad_split.csv
+    split_level: slide
+    mode: wsi
+    wsi_subdir: WSIs
+    coords_subdir: patches
+    slide_ext: .svs
+    columns:
+      sample_id: slide_id
+      split: split
+      image: wsi_path
+  tcga_coad:
+    dataset_dir: /data3/houjunlin/fxx/datasets/TCGA_COAD
+    mask_dir: null
+    split: splits/prognosis_os/tcga_coad_split.csv
+    split_level: slide
+    mode: wsi
+    wsi_subdir: WSIs
+    coords_subdir: patches
+    slide_ext: .svs
+    columns:
+      sample_id: slide_id
+      split: split
+      image: wsi_path
+  nucls:
+    dataset_dir: /data3/houjunlin/fxx/datasets/NuCLS/cell_patches_64
+    mask_dir: null
+    split: splits/single_cell_cls/nucls/nucls_cell_split_fold1.csv
+    split_level: case
+    label_dict: label_dict.json
+    mode: patch
+    native_mpp: 0.2
+    columns:
+      case_id: case_id
+      sample_id: sample_id
+      split: split
+      label: label
+      image: image_path
+  immunocto:
+    dataset_dir: /jhcnas5/houjunlin/multiplexed/Other/ImmunoctoV1
+    mask_dir: null
+    split: splits/single_cell_cls/immunocto/immunocto_patient_split.csv
+    split_level: case
+    label_dict: label_dict.json
+    mode: patch
+    manifest_format: immunocto_compact
+    patient_split: splits/single_cell_cls/immunocto/immunocto_patient_split.csv
+    excluded_paths: splits/single_cell_cls/immunocto/immunocto_train_other_excluded.csv
+    native_mpp: 0.25
+    columns:
+      case_id: patient_id
+      sample_id: patient_id
+      split: split
+      label: label
+  cell_niches:
+    dataset_dir: /data3/houjunlin/fxx/datasets/cell_niches_paired_patches
+    mask_dir: null
+    split: splits/virtual_staining/patches.csv
+    split_level: slide
+    mode: patch
+    native_mpp: 0.5
+    columns:
+      sample_id: patch_id
+      split: keep
+      image: he_relpath

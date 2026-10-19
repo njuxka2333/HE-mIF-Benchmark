@@ -1,0 +1,25 @@
+experiment:
+  id: linear_probe_immunocto_uni2_20x_s32
+  head: linear_probe
+  dataset: immunocto
+  model: uni2
+  target_mpp: 0.5
+  target_patch_size: 32
+  target_features:
+  - z4
+  use_gap: true
+  description: immunocto uni2 z4 GAP encoder features
+masks:
+  save: false
+run:
+  feat_dir: Pre_Features/linear_probe_immunocto_uni2_20x_s32/encoder_z4
+  batch_size: 64
+  feature_storage: split_h5
+  input_format: webdataset
+  use_benchmark_config: true
+  benchmark_config_path: configs/benchmark_models.yaml
+  fallback_mpp: 0.5
+  feature_dtype: float16
+  mask_dtype: uint8
+  wds_root: /data3/houjunlin/fxx/datasets/immunocto_wds
+  iterator_cpus: 8

@@ -1,0 +1,120 @@
+evaluation:
+  id: cellseg_lizard_output_gigatime
+  task: cell_semantic_segmentation
+  dataset: lizard_online
+  head: unetr
+experiment:
+  id: cellseg_lizard_output_gigatime
+  head: unetr
+  dataset: lizard
+  model: gigatime
+  target_mpp: 0.25
+  target_patch_size: 512
+  pathocell_tiling: pfmb
+  description: Lizard virtual-stain MifUNet; PathoCell VS Stage-C seed42 hparams.
+    Val/test use PFMB instance f1_score_macro (encoder cellseg protocol).
+masks:
+  save: false
+data:
+  train_split: train
+  valid_split: valid
+  test_split: test
+  test_result_name: lizard_test_metrics.csv
+  test_batch_size: 4
+  online_sampling:
+    batch_size: 8
+    seed: 42
+    volume_cache_size: 4
+    prefetch_batches: 1
+  mif_layer: mif
+head:
+  decoder_mode: mif_unet
+  in_channels: 23
+  timm_encoder_name: resnet18
+  pretrained: false
+  out_indices:
+  - 1
+  - 2
+  - 3
+  - 4
+  target_size: 256
+  channel_proj_dim: null
+  drop_rate: 0.1
+  decoder_channels:
+  - 64
+  - 128
+  - 256
+  - 256
+  mif_layer: mif
+training:
+  seed: 42
+  device: cuda
+  training_steps: 2000
+  log_interval: 10
+  val_interval: 200
+  online_valid_protocol: full_grid
+  batch_size: 8
+  uniform_class_sampling: true
+  sample_excluded_classes: false
+  amp: true
+  skip_test: false
+  early_stopping: 6000
+  grad_clip_norm: 2.0
+  primary_metric: f1_score_macro
+  optimizer:
+    name: AdamW
+    params:
+      lr: 3.0e-05
+      weight_decay: 0.0001
+    warmup_steps: 100
+  scheduler:
+    name: CosineAnnealingLR
+    params:
+      T_max: 2000
+      eta_min: 1.0e-06
+  loss_fn:
+    name: CrossEntropyLoss
+    params:
+      label_smoothing: 0.05
+      reduction: none
+    class_weighting: true
+    exclude_classes:
+    - 0
+  augmentations:
+    RandomHorizontalFlip:
+      p: 0.5
+    RandomVerticalFlip:
+      p: 0.5
+    RandomAffine:
+      degrees:
+      - 0
+      - 360
+      translate: 0.1
+      scale:
+      - 0.8
+      - 1.2
+      resample: BILINEAR
+    RandomElasticTransform:
+      kernel_size:
+      - 63
+      - 63
+      sigma:
+      - 32.0
+      - 32.0
+      alpha:
+      - 1.0
+      - 1.0
+  vstain_stage: C
+  notes: Retrain after dropping TLS pixel f1_macro. Checkpoint selection is PFMB instance
+    f1_score_macro. lr/steps inherited from PathoCell Stage C.
+metrics:
+  exclude_background: true
+  iou_match_threshold: 0.5
+survival: {}
+run:
+  output_dir: ../Evaluation/cellseg/lizard/output/gigatime
+  use_benchmark_config: false
+  benchmark_config_path: configs/benchmark_models.yaml
+  fallback_mpp: 0.25
+  cpu_threads: 2
+  iterator_cpus: 4

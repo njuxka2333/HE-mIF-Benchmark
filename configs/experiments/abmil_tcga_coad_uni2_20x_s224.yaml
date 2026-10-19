@@ -1,0 +1,21 @@
+experiment:
+  id: abmil_tcga_coad_uni2_20x_s224
+  head: abmil
+  dataset: tcga_coad
+  model: uni2
+  target_mpp: 0.5
+  target_patch_size: 224
+  target_features:
+  - z4
+  description: abmil on tcga_coad with UNI2-h at 20x
+masks:
+  save: false
+run:
+  feat_dir: Pre_Features/abmil_tcga_coad_uni2_20x_s224/encoder_z4
+  feature_storage: patch_h5
+  batch_size: 128
+  use_benchmark_config: true
+  benchmark_config_path: configs/benchmark_models.yaml
+  fallback_mpp: 0.5
+  feature_dtype: float16
+  mask_dtype: uint8

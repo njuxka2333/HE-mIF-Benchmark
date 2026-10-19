@@ -1,0 +1,27 @@
+evaluation:
+  id: virtual_staining_cell_niches_output_histoplexer
+  task: virtual_staining
+  dataset: cell_niches
+  head: virtual_stain
+experiment:
+  id: virtual_staining_cell_niches_output_histoplexer
+  dataset: cell_niches
+  model: histoplexer
+  target_mpp: 0.25
+  target_patch_size: 1024
+  target_features:
+  - mif
+data:
+  patches_dir: /data3/houjunlin/fxx/datasets/cell_niches_paired_patches
+  protocol: cell_niches_shared
+  patch_um: 256
+  feed: whole
+head: {}
+training:
+  significance: true  # CD3 shuffle-null (Spearman + AUPRC) and FOV-bootstrap AUPRC
+  seed: 42
+  batch_size: 1
+  num_previews: 8
+run:
+  output_dir: ../Evaluation/virtual_staining/cell_niches/output/histoplexer
+  script: training.train

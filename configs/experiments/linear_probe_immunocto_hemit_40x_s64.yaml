@@ -1,0 +1,25 @@
+experiment:
+  id: linear_probe_immunocto_hemit_40x_s64
+  head: linear_probe
+  dataset: immunocto
+  model: hemit
+  target_mpp: 0.25
+  target_patch_size: 64
+  target_features:
+  - resnet_blocks
+  use_gap: true
+  description: linear_probe on immunocto with hemit at 40x
+masks:
+  save: false
+run:
+  feat_dir: Pre_Features/linear_probe_immunocto_hemit_40x_s64/encoder_resnet_blocks
+  batch_size: 4
+  feature_storage: split_h5
+  input_format: webdataset
+  wds_root: /data3/houjunlin/fxx/datasets/immunocto_wds
+  iterator_cpus: 4
+  use_benchmark_config: true
+  benchmark_config_path: configs/benchmark_models.yaml
+  fallback_mpp: 0.25
+  feature_dtype: float16
+  mask_dtype: uint8

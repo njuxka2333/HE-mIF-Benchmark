@@ -1,0 +1,21 @@
+experiment:
+  id: abmil_tcga_coad_hemit_40x_s1024
+  head: abmil
+  dataset: tcga_coad
+  model: hemit
+  target_mpp: 0.25
+  target_patch_size: 1024
+  target_features:
+  - resnet_blocks
+  description: abmil on tcga_coad with hemit at 40x
+masks:
+  save: false
+run:
+  feat_dir: Pre_Features/abmil_tcga_coad_hemit_40x_s1024/encoder_resnet_blocks
+  feature_storage: patch_h5
+  batch_size: 4
+  use_benchmark_config: true
+  benchmark_config_path: configs/benchmark_models.yaml
+  fallback_mpp: 0.25
+  feature_dtype: float16
+  mask_dtype: uint8

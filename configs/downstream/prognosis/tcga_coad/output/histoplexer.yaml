@@ -1,0 +1,71 @@
+evaluation:
+  id: prognosis_tcga_coad_output_histoplexer
+  task: prognosis_survival
+  dataset: survival_features
+  head: shazam_survival_abmil
+data:
+  feature_experiment_config: configs/experiments/abmil_tcga_coad_histoplexer_40x_s1024_mif.yaml
+  split_csv: ../splits/prognosis_os/tcga_coad_split_shazam_fold0.csv
+  case_column: case_id
+  slide_column: slide_id
+  split_column: split
+  feature_layer: mif
+  train_split: train
+  valid_split: valid
+  test_split: test
+  cross_validation:
+    enabled: true
+    n_folds: 5
+    split_csv_pattern: tcga_coad_split_shazam_fold{fold}.csv
+    split_csv_dir: ../splits/prognosis_os
+    folds:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+head:
+  hidden_dim: 256
+  dropout: 0.35
+training:
+  seed: 42
+  device: cuda
+  batch_size: 1
+  num_workers: 0
+  torch_num_threads: 1
+  weighted_sample: false
+  gradient_accumulation: 8
+  optimizer:
+    name: AdamW
+    params:
+      lr: 0.0001
+      weight_decay: 0.002
+  loss_fn:
+    name: NLLSurvLoss
+    alpha_surv: 0.4
+  max_epochs: 20
+  use_lr_scheduler: true
+  scheduler:
+    name: CosineAnnealingLR
+    params:
+      T_max: 20
+      eta_min: 1.0e-06
+  primary_metric: c_index
+  primary_metric_mode: max
+  early_stopping_patience: 0
+  feature_normalize: l2
+  cv_std_ddof: 1
+metrics: {}
+survival:
+  time_column: OS.time
+  event_column: OS
+  event_positive_values:
+  - 1
+  n_bins: 4
+  bin_policy: shazam_split
+  prediction_unit: slide
+  bootstrap_ci: false
+  cv_std_ddof: 1
+  risk_threshold_split: test
+run:
+  output_dir: ../Evaluation/prognosis/tcga_coad/output/histoplexer
