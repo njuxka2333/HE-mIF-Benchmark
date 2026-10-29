@@ -32,7 +32,7 @@ def test_every_task_maps_to_an_existing_config_dir():
 def test_every_downstream_config_dir_is_claimed_by_a_task():
     """A new task directory must be registered, or its runs silently never run."""
     on_disk = {p.name for p in (ROOT / "configs" / "downstream").iterdir() if p.is_dir()}
-    claimed = {subdir for subdir, _ in pipeline.TASKS.values()}
+    claimed = {Path(subdir).parts[0] for subdir, _ in pipeline.TASKS.values()}
     assert on_disk == claimed, f"unclaimed: {on_disk - claimed}; stale: {claimed - on_disk}"
 
 
@@ -50,17 +50,9 @@ def test_every_task_key_resolves_to_a_postprocessor():
 def test_scc_supplementary_tasks_are_not_in_task_order():
     assert "single_cell_classification_hoptimus" in pipeline.SUPPLEMENTARY_TASKS
     assert "single_cell_classification_pca" in pipeline.SUPPLEMENTARY_TASKS
-    assert "prognosis_pca" in pipeline.SUPPLEMENTARY_TASKS
-    assert "cell_semantic_segmentation_hoptimus" in pipeline.SUPPLEMENTARY_TASKS
-    assert "tls_region_segmentation_hoptimus" in pipeline.SUPPLEMENTARY_TASKS
     assert "single_cell_classification_hoptimus" not in pipeline.TASK_ORDER
-    assert "cell_semantic_segmentation_hoptimus" not in pipeline.TASK_ORDER
-    assert "tls_region_segmentation_hoptimus" not in pipeline.TASK_ORDER
     assert pipeline.SUPPLEMENTARY_RESULTS_ROOT["single_cell_classification_hoptimus"] == "scc_hoptimus"
     assert pipeline.SUPPLEMENTARY_RESULTS_ROOT["single_cell_classification_pca"] == "scc_pca"
-    assert pipeline.SUPPLEMENTARY_RESULTS_ROOT["prognosis_pca"] == "prognosis_pca"
-    assert pipeline.SUPPLEMENTARY_RESULTS_ROOT["cell_semantic_segmentation_hoptimus"] == "cellseg_hoptimus"
-    assert pipeline.SUPPLEMENTARY_RESULTS_ROOT["tls_region_segmentation_hoptimus"] == "tls_hoptimus"
 
 
 def test_discover_configs_finds_runs_and_filters_by_model():
@@ -269,7 +261,7 @@ def test_split_of_rejects_unknown_case():
 
 def test_official_split_configs_exist_for_every_arm():
     import yaml
-    root = ROOT / "configs" / "downstream" / "linear_probe" / "immunocto"
+    root = ROOT / "configs" / "downstream" / "single_cell_classification" / "immunocto"
     configs = sorted(p for p in root.glob("*/*.yaml"))
     assert len(configs) == 11, [c.name for c in configs]
     for c in configs:
@@ -325,7 +317,7 @@ def test_immunocto_postprocess_rewrites_csv_from_test_metrics(tmp_path):
 
 
 def test_feature_lookup_uses_wsi_cv_fold_layout(tmp_path):
-    from data.feature_bags import _feature_paths_with_folds
+    from data.feature_bags import _feature_paths
 
     feat_dir = tmp_path / "encoder_z4"
     bag = feat_dir / "fold_0" / "test" / "h5_files" / "uni2" / "TCGA-AA.h5"
@@ -335,21 +327,21 @@ def test_feature_lookup_uses_wsi_cv_fold_layout(tmp_path):
     leftover.parent.mkdir(parents=True)
     leftover.write_bytes(b"old")
     exp = SimpleNamespace(feat_dir=feat_dir, model="uni2", output_layout="prepath_legacy")
-    _pt, h5 = _feature_paths_with_folds(exp, "TCGA-AA", "test")
+    _pt, h5 = _feature_paths(exp, "TCGA-AA", "test")
     assert Path(h5) == bag
-    _pt_valid, h5_valid = _feature_paths_with_folds(exp, "TCGA-AA", "valid")
+    _pt_valid, h5_valid = _feature_paths(exp, "TCGA-AA", "valid")
     assert Path(h5_valid) == bag
 
 
 def test_feature_lookup_does_not_use_unique_dump(tmp_path):
-    from data.feature_bags import _feature_paths_with_folds
+    from data.feature_bags import _feature_paths
 
     feat_dir = tmp_path / "encoder_z4"
     leftover = feat_dir / "h5_files" / "uni2" / "O17-01529.h5"
     leftover.parent.mkdir(parents=True)
     leftover.write_bytes(b"old")
     exp = SimpleNamespace(feat_dir=feat_dir, model="uni2", output_layout="prepath_legacy")
-    _pt, h5 = _feature_paths_with_folds(exp, "O17-01529", "train")
+    _pt, h5 = _feature_paths(exp, "O17-01529", "train")
     assert Path(h5) != leftover
     assert not Path(h5).is_file()
 

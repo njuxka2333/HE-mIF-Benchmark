@@ -92,13 +92,13 @@ def test_every_reported_run_has_a_downstream_yaml():
     vs_models = models[:-1]  # UNI2 has no virtual-staining layer
     expected = []
     for task in (
-        "linear_probe/immunocto",
-        "linear_probe/nucls",
+        "single_cell_classification/immunocto",
+        "single_cell_classification/nucls",
         "prognosis/tcga_coad",
         "prognosis/tcga_luad",
-        "tls",
-        "cellseg/pathocell",
-        "cellseg/lizard",
+        "tls_region_segmentation/hooknet_tls",
+        "cell_semantic_segmentation/pathocell",
+        "cell_semantic_segmentation/lizard",
     ):
         for layer in ("encoder", "output"):
             for model in models if layer == "encoder" else vs_models:
@@ -111,11 +111,8 @@ def test_every_reported_run_has_a_downstream_yaml():
     extra = sorted(
         p for p in set(DOWNSTREAM_DIR.rglob("*.yaml")) - set(expected)
         if p.relative_to(DOWNSTREAM_DIR).parts[0] not in {
-            "linear_probe_hoptimus",
-            "linear_probe_pca",
-            "prognosis_pca",
-            "tls_hoptimus",
-            "cellseg_hoptimus",
+            "single_cell_classification_hoptimus",
+            "single_cell_classification_pca",
         }
     )
     assert not missing, missing
@@ -126,7 +123,7 @@ def test_every_reported_run_has_a_downstream_yaml():
 def test_linear_probe_selects_on_valid_and_tests_once():
     import yaml
 
-    for path in sorted((DOWNSTREAM_DIR / "linear_probe").rglob("*.yaml")):
+    for path in sorted((DOWNSTREAM_DIR / "single_cell_classification").rglob("*.yaml")):
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         training = raw.get("training") or {}
         assert training.get("evaluate_test") is True, path
@@ -139,7 +136,7 @@ def test_linear_probe_selects_on_valid_and_tests_once():
 def test_tls_and_cellseg_validate_on_full_grid():
     import yaml
 
-    for task in ("tls", "cellseg"):
+    for task in ("tls_region_segmentation", "cell_semantic_segmentation"):
         for path in sorted((DOWNSTREAM_DIR / task).rglob("*.yaml")):
             raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
             training = raw.get("training") or {}

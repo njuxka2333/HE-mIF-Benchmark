@@ -18,7 +18,9 @@ BENCHMARK_ROOT = Path(__file__).resolve().parents[1]
 if str(BENCHMARK_ROOT) not in sys.path:
     sys.path.insert(0, str(BENCHMARK_ROOT))
 
-ONLINE_TASKS = {"cell_semantic_segmentation", "tls_region_segmentation"}
+from pipeline.plan import ONLINE_TASKS, load_pipeline_plan  # noqa: E402
+from pipeline.runner import run_pipeline  # noqa: E402
+
 CPU_THREAD_KEYS = (
     "OMP_NUM_THREADS",
     "MKL_NUM_THREADS",
@@ -29,73 +31,30 @@ CPU_THREAD_KEYS = (
 )
 
 
-def _hydrate_training_symbols_from_pyc() -> None:
-    """Online bytecode imports helpers from ``training.train``; keep router, fill gaps from .pyc."""
-    if globals().get("_TRAIN_HYDRATE_ACTIVE") or globals().get("_aggregate_metrics") is not None:
-        return
-    major, minor = sys.version_info[:2]
-    if (major, minor) < (3, 11):
-        return
-    import importlib.util
-
-    from training._bytecode_pick import pick_pyc, pyc_magic_matches
-
-    globals()["_TRAIN_HYDRATE_ACTIVE"] = True
-    try:
-        here = Path(__file__).resolve().parent
-        if here.name == "__pycache__":
-            here = here.parent
-        pyc = here / "_orig_pyc" / "train.pyc"
-        if not pyc.is_file() or not pyc_magic_matches(pyc):
-            pyc = pick_pyc("train", here, min_size=2000)
-        modname = "_bytecode_train_helpers"
-        spec = importlib.util.spec_from_file_location(modname, pyc)
-        if spec is None or spec.loader is None:
-            return
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        keep = {
-            "main",
-            "_run_offline",
-            "_run_online",
-            "_run_mif_unet",
-            "_run_mif_feature",
-            "_run_mif_score",
-            "_run_vstain",
-            "_run_cell_niches",
-            "_run_cell_niches_mipheivit",
-            "_normalise_args",
-            "_config_task",
-            "_config_route",
-            "_load_config_dict",
-            "_limit_cpu_threads",
-            "_ROUTERS",
-            "ONLINE_TASKS",
-            "CPU_THREAD_KEYS",
-            "BENCHMARK_ROOT",
-            "_hydrate_training_symbols_from_pyc",
-            "_TRAIN_HYDRATE_ACTIVE",
-            "argparse",
-            "os",
-            "sys",
-            "Path",
-            "yaml",
-            "__name__",
-            "__doc__",
-            "__file__",
-            "__package__",
-            "__cached__",
-            "__spec__",
-        }
-        for key, value in vars(mod).items():
-            if key in keep or key.startswith("__"):
-                continue
-            globals()[key] = value
-    finally:
-        globals().pop("_TRAIN_HYDRATE_ACTIVE", None)
-
-
-_hydrate_training_symbols_from_pyc()
+# The router stays independent from trainer internals. Offline helpers are
+# imported explicitly for the test-only and PCA paths that still share them.
+from training.offline_train import (  # noqa: E402
+    HEAD_REGISTRY,
+    _aggregate_metrics,
+    _classwise_test_rows,
+    _configure_torch_threads,
+    _cross_validation_folds,
+    _eval_linear_probe,
+    _loss_fn,
+    _make_dataset,
+    _make_head,
+    _make_optimizer,
+    _make_scheduler,
+    _log,
+    _prepare_output_dirs,
+    _resolve_cv_split_csv,
+    _validate_task_config,
+    _write_linear_probe_test_outputs,
+    _write_metrics,
+    _write_test_csv,
+    evaluate,
+    set_seed,
+)
 
 from training.pca_features import install_pca_hook  # noqa: E402
 
@@ -115,21 +74,7 @@ def _config_task(config_path: Path) -> str:
 
 def _config_route(config_path: Path) -> str:
     """Pick the trainer from task + decoder_mode, not from a scripts/ wrapper."""
-    raw = _load_config_dict(config_path)
-    evaluation = raw.get("evaluation") or {}
-    head = raw.get("head") or {}
-    task = str(evaluation.get("task") or raw.get("task") or "")
-    eval_head = str(evaluation.get("head") or "")
-    mode = str(head.get("decoder_mode") or "").strip().lower()
-    if task == "virtual_staining" or eval_head == "virtual_stain":
-        return "mif_score"
-    if mode == "mif_unet":
-        return "mif_unet"
-    if mode == "mif_feature":
-        return "mif_feature"
-    if task in ONLINE_TASKS:
-        return "online"
-    return "offline"
+    return load_pipeline_plan(config_path).trainer
 
 
 def _normalise_args(argv: list[str]) -> argparse.Namespace:
@@ -242,18 +187,18 @@ def _run_online(args: argparse.Namespace) -> None:
     online_main()
 
 
-def _run_mif_unet(args: argparse.Namespace) -> None:
+def _run_virtual_staining_unet(args: argparse.Namespace) -> None:
     _limit_cpu_threads()
-    from mif.train_unet import main as mif_main
+    from virtual_staining.train_unet import main as train_main
 
-    mif_main(["--config", str(args.config)])
+    train_main(["--config", str(args.config)])
 
 
-def _run_mif_feature(args: argparse.Namespace) -> None:
+def _run_virtual_staining_feature(args: argparse.Namespace) -> None:
     _limit_cpu_threads()
-    from mif.train_feature import main as mif_main
+    from virtual_staining.train_feature import main as train_main
 
-    mif_main(["--config", str(args.config)])
+    train_main(["--config", str(args.config)])
 
 
 def _significance_forwarded_args(args: argparse.Namespace) -> list[str]:
@@ -269,37 +214,38 @@ def _significance_forwarded_args(args: argparse.Namespace) -> list[str]:
     return forwarded
 
 
-def _run_mif_score(args: argparse.Namespace) -> None:
-    from mif.score import main as score_main
+def _run_virtual_staining_score(args: argparse.Namespace) -> None:
+    from virtual_staining.score import main as score_main
 
     score_main(["--config", str(args.config), *_significance_forwarded_args(args)])
-
-
-_run_vstain = _run_mif_score
-_run_cell_niches = _run_mif_score
-_run_cell_niches_mipheivit = _run_mif_score
 
 
 _ROUTERS = {
     "offline": _run_offline,
     "online": _run_online,
-    "mif_unet": _run_mif_unet,
-    "mif_feature": _run_mif_feature,
-    "mif_score": _run_mif_score,
+    "virtual_staining_unet": _run_virtual_staining_unet,
+    "virtual_staining_feature": _run_virtual_staining_feature,
+    "virtual_staining_score": _run_virtual_staining_score,
 }
 
 
 def main(argv: list[str] | None = None) -> None:
     args = _normalise_args(sys.argv[1:] if argv is None else argv)
-    from feature_extraction.hoptimus0 import apply_extract_env_from_config
+    from feature_extraction.frozen_hoptimus import apply_extract_env_from_config
 
     apply_extract_env_from_config(args.config)
-    route = _config_route(args.config)
+    plan = load_pipeline_plan(args.config)
     try:
-        runner = _ROUTERS[route]
+        trainer = _ROUTERS[plan.trainer]
     except KeyError as exc:
-        raise SystemExit(f"unknown train route {route!r} for {args.config}") from exc
-    runner(args)
+        raise SystemExit(
+            f"unknown trainer {plan.trainer!r} for pipeline {plan.run_id!r}"
+        ) from exc
+    print(
+        f"Pipeline: {plan.run_id} | {plan.execution_mode} | "
+        f"loader={plan.data_loader} | head={plan.head['name']}"
+    )
+    run_pipeline(plan, args, trainer)
 
 
 if __name__ == "__main__":

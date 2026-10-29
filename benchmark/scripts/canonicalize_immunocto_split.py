@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Make the leakage-free Immunocto assignment the one and only split.
 
-1. Rewrite ``immunocto_patient_split.csv`` to train/valid/test from
+1. Rewrite ``patient_split.csv`` to train/valid/test from
    :mod:`data.immunocto` (CRC02/11/19/30 test).
 2. Recompute surplus-``other`` exclusions so each split keeps ``other`` count
    equal to that split's ``cd4`` count (seed 42, sorted paths). Freeze the list
-   to ``immunocto_train_other_excluded.csv``.
+   to ``other_excluded.csv.gz``.
 3. Rewrite ``immunocto_split.csv`` split + ``offline_sampler_excluded`` to match.
 4. Rebuild every linear-probe H5 tree: unique cells only (CRC29–32 are no
    longer copied into two splits), then drop the frozen exclusions.
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import json
 import os
 import shutil
@@ -36,7 +37,7 @@ if str(ROOT) not in sys.path:
 from data.immunocto import assignment, split_of  # noqa: E402
 
 DATA = Path("/jhcnas5/houjunlin/multiplexed/Other/ImmunoctoV1")
-SPLIT_DIR = REPO / "splits" / "single_cell_cls" / "immunocto"
+SPLIT_DIR = REPO / "splits" / "single_cell_classification" / "immunocto"
 SEED = 42
 SPLITS = ("train", "valid", "test")
 PF = REPO / "Pre_Features"
@@ -118,8 +119,8 @@ def freeze_catalog(split_csv: Path, excl_csv: Path, patient_csv: Path) -> dict:
     RETIRE.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d")
     for src, name in (
-        (patient_csv, f"immunocto_patient_split.legacy_{stamp}.csv"),
-        (excl_csv, f"immunocto_train_other_excluded.legacy_{stamp}.csv"),
+        (patient_csv, f"patient_split.legacy_{stamp}.csv"),
+        (excl_csv, f"other_excluded.legacy_{stamp}.csv.gz"),
     ):
         if src.is_file():
             shutil.copy2(src, RETIRE / name)
@@ -133,8 +134,8 @@ def freeze_catalog(split_csv: Path, excl_csv: Path, patient_csv: Path) -> dict:
                 w.writerow({"patient_id": pid, "split": sp})
     os.replace(tmp_patient, patient_csv)
 
-    tmp_excl = excl_csv.with_suffix(".tmp")
-    with tmp_excl.open("w", newline="", encoding="utf-8") as handle:
+    tmp_excl = excl_csv.with_suffix(excl_csv.suffix + ".tmp")
+    with gzip.open(tmp_excl, "wt", newline="", encoding="utf-8") as handle:
         w = csv.DictWriter(handle, fieldnames=["image_path"])
         w.writeheader()
         for p in sorted(excluded_set):
@@ -395,8 +396,8 @@ def main() -> None:
     ap.add_argument("--only-tree", type=str, default="", help="substring filter on feat dir")
     args = ap.parse_args()
 
-    patient_csv = SPLIT_DIR / "immunocto_patient_split.csv"
-    excl_csv = SPLIT_DIR / "immunocto_train_other_excluded.csv"
+    patient_csv = SPLIT_DIR / "patient_split.csv"
+    excl_csv = SPLIT_DIR / "other_excluded.csv.gz"
     split_csv = DATA / "immunocto_split.csv"
 
     if args.intersect_only:
@@ -406,7 +407,7 @@ def main() -> None:
 
     if args.skip_catalog:
         excluded = set()
-        with excl_csv.open() as handle:
+        with gzip.open(excl_csv, "rt", newline="", encoding="utf-8") as handle:
             for row in csv.DictReader(handle):
                 excluded.add(_rel_path(row["image_path"]))
         print(f"loaded frozen exclusion n={len(excluded)}", flush=True)

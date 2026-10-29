@@ -16,8 +16,8 @@ import csv
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-from data.hooknet_tls import PatchPlanRecord
-from data.hooknet_tls_physical_grid import physical_fov_um
+from data.hooknet_tls.planning import PatchPlanRecord
+from data.hooknet_tls.physical_grid import physical_fov_um
 
 TLS_PATCH_FIELDS = [
     "slide_id",

@@ -8,7 +8,7 @@
     python -m preprocessing.build --dataset immunocto
 
 Prognosis writes CLAM ``patches/{slide}.h5`` coords.
-TLS writes PNG+mask from the frozen ``splits/tls_seg/patches.csv`` crop boxes.
+TLS writes PNG+mask from the frozen ``splits/tls_region_segmentation/hooknet_tls/patches.csv`` crop boxes.
 Cell-niches writes paired HE/mIF tiles from the frozen VS catalog.
 Lizard converts official PNG/.mat labels into PathoCell-style HDF.
 Immunocto writes the webdataset shards used by feature extraction.
@@ -23,9 +23,9 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from data.hooknet_tls import load_selected_tiles_csv
-from data.hooknet_tls_physical_grid import materialize_physical_record
-from data.hooknet_tls_wsd import load_official_wsa
+from data.hooknet_tls.planning import load_selected_tiles_csv
+from data.hooknet_tls.physical_grid import materialize_physical_record
+from data.hooknet_tls.annotations import load_official_wsa
 from data.loader import get_dataset_config, load_split_samples
 from preprocessing.wsi.coords import coords_for_slide, load_wsi_patch_protocol, write_coords_h5
 from utils.paths import SPLITS_ROOT, cell_niches_raw_root, datasets_root
@@ -33,14 +33,14 @@ from utils.paths import SPLITS_ROOT, cell_niches_raw_root, datasets_root
 _SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 
 
-def _parse() -> argparse.Namespace:
+def _parse(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--dataset", required=True)
     p.add_argument("--slide-id", default=None)
     p.add_argument("--skip-existing", action="store_true", default=True)
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--data-config", default=None)
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
 def _build_wsi_coords(dataset: str, args: argparse.Namespace) -> None:
@@ -78,7 +78,7 @@ def _build_tls(args: argparse.Namespace) -> None:
     from wholeslidedata.image.wholeslideimage import WholeSlideImage
 
     cfg = get_dataset_config("hooknet_tls", args.data_config)
-    catalog = SPLITS_ROOT / "tls_seg" / "patches.csv"
+    catalog = SPLITS_ROOT / "tls_region_segmentation" / "hooknet_tls" / "patches.csv"
     if not catalog.is_file():
         raise FileNotFoundError(f"frozen TLS catalog missing: {catalog}")
     records = load_selected_tiles_csv(catalog)
@@ -135,7 +135,7 @@ def _build_cell_niches(args: argparse.Namespace) -> None:
     from preprocessing.cell_niches.extract import FilterConfig, extract_cohort
 
     out = datasets_root() / "cell_niches_paired_patches"
-    frozen = SPLITS_ROOT / "virtual_staining" / "patches.csv"
+    frozen = SPLITS_ROOT / "virtual_staining" / "cell_niches" / "patches.csv"
     root = cell_niches_raw_root()
     extract_cohort(root, out, FilterConfig(), write_patches=True, fov_ids=None)
     if frozen.is_file() and not (out / "patches.csv").is_file():
@@ -177,8 +177,8 @@ def _build_immunocto(args: argparse.Namespace) -> None:
     _run_script("build_immunocto_webdataset.py", forwarded)
 
 
-def main() -> None:
-    args = _parse()
+def main(argv: list[str] | None = None) -> None:
+    args = _parse(argv)
     if args.dataset in {"tcga_coad", "tcga_luad"}:
         _build_wsi_coords(args.dataset, args)
         return

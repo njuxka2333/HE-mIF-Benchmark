@@ -586,7 +586,7 @@ def _label_from_immunocto_image_id(image_id: str) -> str:
     return parts[0] if len(parts) == 3 else str(image_id).split("_", 1)[0]
 
 
-_IMMUNOCTO_CELL_INDEX = SPLITS_ROOT / "single_cell_cls" / "immunocto" / "cell_index.csv"
+_IMMUNOCTO_CELL_INDEX = SPLITS_ROOT / "single_cell_classification" / "immunocto" / "cell_index.csv.gz"
 
 
 def _load_immunocto_index_csv(

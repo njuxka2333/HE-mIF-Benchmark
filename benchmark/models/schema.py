@@ -133,7 +133,7 @@ class ModelConfig:
 
 @dataclass
 class ExtractionRunConfig:
-    """Top-level run settings for feature_extraction/run_fp_fast.py."""
+    """Top-level run settings consumed by the feature extraction engine."""
 
     model: str
     feat_dir: str

@@ -5,7 +5,7 @@ evaluation:
   head: shazam_survival_abmil
 data:
   feature_experiment_config: configs/experiments/abmil_tcga_luad_mipheivit_20x_s256.yaml
-  split_csv: ../splits/prognosis_os/tcga_luad_split_cv5_os_balanced_fold0.csv
+  split_csv: splits/prognosis/tcga_luad/fold_0.csv
   case_column: case_id
   slide_column: slide_id
   split_column: split
@@ -16,8 +16,8 @@ data:
   cross_validation:
     enabled: true
     n_folds: 5
-    split_csv_pattern: tcga_luad_split_cv5_os_balanced_fold{fold}.csv
-    split_csv_dir: ../splits/prognosis_os
+    split_csv_pattern: fold_{fold}.csv
+    split_csv_dir: splits/prognosis/tcga_luad
     folds:
     - 0
     - 1

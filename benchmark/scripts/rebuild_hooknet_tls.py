@@ -15,17 +15,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from data.hooknet_tls import (  # noqa: E402
+from data.hooknet_tls.planning import (  # noqa: E402
     apply_manifest_selection,
     load_fixed_grid_build_config,
     write_manifest_summary_json,
     write_selected_tiles_csv,
 )
-from data.hooknet_tls_physical_grid import (  # noqa: E402
+from data.hooknet_tls.physical_grid import (  # noqa: E402
     build_physical_slide_plan,
     materialize_physical_record,
 )
-from data.hooknet_tls_wsd import load_official_wsa  # noqa: E402
+from data.hooknet_tls.annotations import load_official_wsa  # noqa: E402
 from data.loader import get_dataset_config  # noqa: E402
 
 
@@ -33,7 +33,7 @@ def args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output-root", type=Path, required=True)
     p.add_argument("--yes-delete-existing", action="store_true")
-    p.add_argument("--split-csv", type=Path, default=ROOT.parent / "splits" / "tls_seg" / "hooknet-tls_split.csv")
+    p.add_argument("--split-csv", type=Path, default=ROOT.parent / "splits" / "tls_region_segmentation" / "hooknet_tls" / "slide_split.csv")
     p.add_argument("--data-config", type=Path, default=ROOT / "configs/datasets.yaml")
     p.add_argument("--build-config", type=Path, default=ROOT / "configs/hooknet_tls.yaml")
     p.add_argument("--reference-mpp", type=float, default=0.25)

@@ -19,10 +19,10 @@ so **CRC02, CRC11, CRC19 and CRC30 are the only Orion slides MIPHEI-ViT never
 trained on**. The benchmark's original test split (CRC33-CRC40) lay entirely
 inside its training set, which made the MIPHEI-ViT-vs-UNI2 comparison on
 Immunocto uninterpretable. This assignment **is** the official Immunocto split
-(``immunocto_patient_split.csv``): those four slides are test, CRC37–40 are
+(``patient_split.csv``): those four slides are test, CRC37–40 are
 valid, and the remaining 32 are train. Surplus-``other`` cells are capped per
 split to that split's ``cd4`` count (seed 42) and frozen in
-``immunocto_train_other_excluded.csv``.
+``other_excluded.csv.gz``.
 
 Two residual caveats, to be reported rather than resolved:
 

@@ -85,13 +85,13 @@ datasets:
     kind: wsi_cv
     n_folds: 5
     valid_equals_test: true
-    fold_csv: ../splits/prognosis_os/tcga_coad_split_shazam_fold{fold}.csv
+    fold_csv: splits/prognosis/tcga_coad/fold_{fold}.csv
     online: false
   tcga_luad:
     kind: wsi_cv
     n_folds: 5
     valid_equals_test: true
-    fold_csv: ../splits/prognosis_os/tcga_luad_split_cv5_os_balanced_fold{fold}.csv
+    fold_csv: splits/prognosis/tcga_luad/fold_{fold}.csv
     online: false
   hooknet_tls:
     kind: online

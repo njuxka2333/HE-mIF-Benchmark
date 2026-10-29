@@ -230,7 +230,7 @@ def apply_model_env(cfg: ModelConfig) -> None:
             os.environ["MIPHEI_ENCODER_NAME"] = str(cfg.extra["encoder_name"])
         if cfg.extra.get("num_classes") is not None:
             os.environ["MIPHEI_NUM_CLASSES"] = str(cfg.extra["num_classes"])
-        from feature_extraction.hoptimus0 import frozen_hoptimus_requested
+        from feature_extraction.frozen_hoptimus import frozen_hoptimus_requested
 
         if frozen_hoptimus_requested():
             os.environ["MIPHEI_USE_LORA"] = "0"

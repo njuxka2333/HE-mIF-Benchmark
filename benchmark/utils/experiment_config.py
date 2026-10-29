@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -86,13 +85,13 @@ class ExtractionTask:
 
 
 @dataclass
-class OfficialSamplingSettings:
-    """HookNet-TLS sampling over the official merged XML masks.
+class FixedGridSamplingSettings:
+    """HookNet-TLS sampling from its pre-cropped fixed-grid PNGs.
 
     When ``fixed_grid_root`` is set, training reads pre-extracted PNG patches from
-    ``{fixed_grid_root}/{split}/``. Default ``fixed_grid_sampler_mode=index`` uses
-    PathoCell PFMB tiling over each canonical 1024 px cell
-    (``FixedGridIndexSampler``). WSI-while-train sampling is not supported.
+    ``{fixed_grid_root}/{split}/``. ``FixedGridTileSampler`` applies the shared
+    PFMB tiling geometry to each canonical 1024 px cell. WSI-while-train sampling is
+    not supported.
     """
 
     start_epoch: int = 0
@@ -102,14 +101,10 @@ class OfficialSamplingSettings:
     seed: int = 42
     fast: bool = True
     progress_every: int = 1000
-    wsi_cache_size: int = 4
     prefetch_batches: int = 2
-    mask_cache_size: int = 65536
     fixed_grid_root: Optional[Path] = None
-    fixed_grid_patch_weight: str = "uniform"
     fixed_grid_min_selected_class_pixels: int = 1
     fixed_grid_max_resample_attempts: int = 32
-    fixed_grid_sampler_mode: str = "index"
 
 
 @dataclass
@@ -147,7 +142,7 @@ class ExperimentConfig:
     iterator_cpus: int = 4
     progress_every: int = 500
     coords_manifest: Optional[Path] = None
-    official_sampling: Optional[OfficialSamplingSettings] = None
+    fixed_grid_sampling: Optional[FixedGridSamplingSettings] = None
     pathocell_tiling: str = "pfmb"
     split_layer_feat_dirs: bool = False
     layer_feat_dirs: Optional[Dict[str, Path]] = None
@@ -268,56 +263,32 @@ def load_experiment_config(path: str | Path) -> ExperimentConfig:
         feature_storage = "patch_h5" if head == "unetr" else "legacy_pt"
 
     extraction_mode = str(run.get("extraction_mode", "grid"))
-    raw_official = run.get("official_sampling")
-    official_sampling = None
-    if raw_official:
+    raw_fixed_grid_sampling = run.get("fixed_grid_sampling")
+    fixed_grid_sampling = None
+    if raw_fixed_grid_sampling:
         if extraction_mode == "grid":
-            extraction_mode = "official_sampling"
-        if raw_official.get("spacing") is not None:
-            warnings.warn(
-                f"{path}: run.official_sampling.spacing is ignored; using experiment.target_mpp for WSI patch spacing.",
-                stacklevel=1,
-            )
-        strict = bool(raw_official.get("strict", False))
-        fast = bool(raw_official.get("fast", not strict))
-        fixed_grid_root_raw = raw_official.get("fixed_grid_root")
+            extraction_mode = "fixed_grid"
+        fast = bool(raw_fixed_grid_sampling.get("fast", True))
+        fixed_grid_root_raw = raw_fixed_grid_sampling.get("fixed_grid_root")
         fixed_grid_root = (
             _resolve_path(fixed_grid_root_raw, PREPATH_ROOT) if fixed_grid_root_raw else None
         )
-        patch_weight = str(
-            raw_official.get("fixed_grid_patch_weight", "uniform")
-        ).strip().lower()
-        if patch_weight not in {"uniform", "pixel"}:
-            raise ValueError(
-                f"{path}: official_sampling.fixed_grid_patch_weight must be 'uniform' or 'pixel' (got {patch_weight!r})"
-            )
-        sampler_mode = str(
-            raw_official.get("fixed_grid_sampler_mode", "index")
-        ).strip().lower()
-        if sampler_mode not in {"index", "label_balanced"}:
-            raise ValueError(
-                f"{path}: official_sampling.fixed_grid_sampler_mode must be 'index' or 'label_balanced' (got {sampler_mode!r})"
-            )
-        official_sampling = OfficialSamplingSettings(
-            start_epoch=int(raw_official.get("start_epoch", 0)),
-            epochs=int(raw_official.get("epochs", 200)),
-            steps=int(raw_official.get("steps", 250)),
-            sampler_batch_size=int(raw_official.get("sampler_batch_size", 24)),
-            seed=int(raw_official.get("seed", 42)),
+        fixed_grid_sampling = FixedGridSamplingSettings(
+            start_epoch=int(raw_fixed_grid_sampling.get("start_epoch", 0)),
+            epochs=int(raw_fixed_grid_sampling.get("epochs", 200)),
+            steps=int(raw_fixed_grid_sampling.get("steps", 250)),
+            sampler_batch_size=int(raw_fixed_grid_sampling.get("sampler_batch_size", 24)),
+            seed=int(raw_fixed_grid_sampling.get("seed", 42)),
             fast=fast,
-            progress_every=int(raw_official.get("progress_every", 1000)),
-            wsi_cache_size=int(raw_official.get("wsi_cache_size", 4)),
-            prefetch_batches=int(raw_official.get("prefetch_batches", 2)),
-            mask_cache_size=int(raw_official.get("mask_cache_size", 65536)),
+            progress_every=int(raw_fixed_grid_sampling.get("progress_every", 1000)),
+            prefetch_batches=int(raw_fixed_grid_sampling.get("prefetch_batches", 2)),
             fixed_grid_root=fixed_grid_root,
-            fixed_grid_patch_weight=patch_weight,
             fixed_grid_min_selected_class_pixels=max(
-                1, int(raw_official.get("fixed_grid_min_selected_class_pixels", 1))
+                1, int(raw_fixed_grid_sampling.get("fixed_grid_min_selected_class_pixels", 1))
             ),
             fixed_grid_max_resample_attempts=max(
-                1, int(raw_official.get("fixed_grid_max_resample_attempts", 32))
+                1, int(raw_fixed_grid_sampling.get("fixed_grid_max_resample_attempts", 32))
             ),
-            fixed_grid_sampler_mode=sampler_mode,
         )
         if fixed_grid_root is not None:
             extraction_mode = "fixed_grid"
@@ -346,19 +317,19 @@ def load_experiment_config(path: str | Path) -> ExperimentConfig:
                 "online_sampler",
             }:
                 raise ValueError(
-                    f"{path}: with official_sampling.fixed_grid_root, training.online_valid_protocol must be 'sampled' or 'full_grid' (got {valid_proto!r})"
+                    f"{path}: with fixed_grid_sampling.fixed_grid_root, training.online_valid_protocol must be 'sampled' or 'full_grid' (got {valid_proto!r})"
                 )
             if test_proto in {"sliding_window", "grid"}:
                 raise ValueError(
-                    f"{path}: with official_sampling.fixed_grid_root, data.test_eval_protocol must be 'fixed_sampled' or 'full_grid' (got {test_proto!r})"
+                    f"{path}: with fixed_grid_sampling.fixed_grid_root, data.test_eval_protocol must be 'fixed_sampled' or 'full_grid' (got {test_proto!r})"
                 )
-    elif extraction_mode == "official_sampling":
-        raise ValueError(f"{path}: extraction_mode=official_sampling requires run.official_sampling")
+    elif extraction_mode == "fixed_grid":
+        raise ValueError(f"{path}: extraction_mode={extraction_mode} requires run.fixed_grid_sampling")
 
     if dataset_name == "hooknet_tls":
-        if official_sampling is None or official_sampling.fixed_grid_root is None:
+        if fixed_grid_sampling is None or fixed_grid_sampling.fixed_grid_root is None:
             raise ValueError(
-                f"{path}: TLS requires official_sampling.fixed_grid_root "
+                f"{path}: TLS requires fixed_grid_sampling.fixed_grid_root "
                 "(pre-cropped PNG grid); WSI-while-train sampling is removed"
             )
 
@@ -421,7 +392,7 @@ def load_experiment_config(path: str | Path) -> ExperimentConfig:
         iterator_cpus=int(run.get("num_workers", run.get("iterator_cpus", 4))),
         progress_every=int(run.get("progress_every", 500)),
         coords_manifest=coords_manifest,
-        official_sampling=official_sampling,
+        fixed_grid_sampling=fixed_grid_sampling,
         pathocell_tiling=pathocell_tiling,
         split_layer_feat_dirs=split_layer_feat_dirs,
         layer_feat_dirs=layer_feat_dirs,

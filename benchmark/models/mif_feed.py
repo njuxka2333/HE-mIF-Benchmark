@@ -1,6 +1,6 @@
 """Paper-native HE feeds for frozen HE→mIF generators.
 
-Virtual-staining scoring and the example-tile renderer use this. Output-layer
+Virtual-staining scoring and the standalone example renderer use this. Output-layer
 segmentation still runs one tile at a time through ``FrozenMifGenerator``; the
 geometry here is how a 256 µm Cell-niches window is presented to each model.
 """

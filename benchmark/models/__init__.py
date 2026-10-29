@@ -1,52 +1,8 @@
-# following PrePATH style.
 """Model registry for HE-mIF-Benchmark feature extraction."""
 
 from __future__ import annotations
 
-import importlib
 import os
-import sys
-from importlib.abc import Loader, MetaPathFinder
-from importlib.machinery import ModuleSpec
-
-import torch
-
-# Bytecode still imports models.config.*; implementations now live next door.
-_CONFIG_ALIASES = {
-    "models.config.checkpoints": "utils.checkpoints",
-    "models.config.registry": "models.registry",
-    "models.config.schema": "models.schema",
-    "models.config.runtime": "models.registry",
-    "models.config.resolution": "models.registry",
-}
-
-
-class _ConfigAliasFinder(MetaPathFinder):
-    def find_spec(self, fullname, path, target=None):  # noqa: ARG002
-        real = _CONFIG_ALIASES.get(fullname)
-        if real is None:
-            return None
-        return ModuleSpec(fullname, _ConfigAliasLoader(fullname, real))
-
-
-class _ConfigAliasLoader(Loader):
-    def __init__(self, alias: str, real: str) -> None:
-        self.alias = alias
-        self.real = real
-
-    def create_module(self, spec):  # noqa: ARG002
-        if self.alias in sys.modules:
-            return sys.modules[self.alias]
-        actual = importlib.import_module(self.real)
-        sys.modules[self.alias] = actual
-        return actual
-
-    def exec_module(self, module):  # noqa: ARG002
-        return None
-
-
-if not any(type(finder).__name__ == "_ConfigAliasFinder" for finder in sys.meta_path):
-    sys.meta_path.insert(0, _ConfigAliasFinder())
 
 __all__ = ["list_models", "get_model", "get_custom_transformer", "BENCHMARK_MODELS"]
 
@@ -106,13 +62,13 @@ def get_model(
 
             cfg = get_model_config(model_name, config_path)
             apply_model_env(cfg)
-            from feature_extraction.hoptimus0 import (
+            from feature_extraction.frozen_hoptimus import (
                 frozen_hoptimus_requested,
-                install_frozen_encoder,
+                configure_frozen_hoptimus,
             )
 
             if frozen_hoptimus_requested():
-                install_frozen_encoder()
+                configure_frozen_hoptimus()
             return load_model_from_config(model_name, device, gpu_num, config_path)
 
     ckpt = None if name == "uni2" else _resolve_ckpt(name, config_path)

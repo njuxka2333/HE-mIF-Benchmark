@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import io
 import json
 import os
@@ -35,7 +36,7 @@ if str(ROOT) not in sys.path:
 from utils.paths import SPLITS_ROOT  # noqa: E402
 from data.loader import get_dataset_config, open_csv_table, resolve_table_path  # noqa: E402
 
-IMMUNOCTO_SPLITS = SPLITS_ROOT / "single_cell_cls" / "immunocto"
+IMMUNOCTO_SPLITS = SPLITS_ROOT / "single_cell_classification" / "immunocto"
 
 TRUE_VALUES = {"true", "1", "yes", "y"}
 
@@ -98,8 +99,9 @@ def compact_manifest(
     excluded_csv.parent.mkdir(parents=True, exist_ok=True)
     report_json.parent.mkdir(parents=True, exist_ok=True)
 
-    with source_csv.open(newline="", encoding="utf-8-sig") as src, excluded_tmp.open(
-        "w", newline="", encoding="utf-8"
+    excluded_open = gzip.open if excluded_csv.name.endswith(".gz") else open
+    with source_csv.open(newline="", encoding="utf-8-sig") as src, excluded_open(
+        excluded_tmp, "wt", newline="", encoding="utf-8"
     ) as excl_handle:
         reader = csv.DictReader(src)
         required = {
@@ -417,8 +419,8 @@ def main() -> None:
     root = (args.root or get_dataset_config("immunocto").dataset_dir).resolve()
     output_root = args.output_root or root / "immunocto_wds"
     source_csv = args.source_csv or root / "immunocto_split.csv"
-    patient_split = args.patient_split or IMMUNOCTO_SPLITS / "immunocto_patient_split.csv"
-    excluded_paths_file = args.excluded_paths or IMMUNOCTO_SPLITS / "immunocto_train_other_excluded.csv"
+    patient_split = args.patient_split or IMMUNOCTO_SPLITS / "patient_split.csv"
+    excluded_paths_file = args.excluded_paths or IMMUNOCTO_SPLITS / "other_excluded.csv.gz"
     compact_report = args.compact_report or root / "immunocto_compact_manifest_report.json"
 
     compact_summary = None

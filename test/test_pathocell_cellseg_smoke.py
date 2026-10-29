@@ -9,11 +9,11 @@ import torch.nn as nn
 import yaml
 
 from data.loader import get_dataset_config, load_split_samples
-from data.pathocell_online_sampler import PathoCellOnlineSampler
+from data.pathocell.sampler import HDFTileBatchSampler
 from training.augmentations import InputNormalization, build_augmenter, find_input_normalization
 from heads import build_segmentation_head, forward_segmentation_head
 from training.online_segmentation_train import (
-    _assert_pathocell_benchmark_protocol,
+    _assert_pathocell_segmentation_head,
     load_online_eval_bundle,
     maybe_augment,
     resolve_num_classes,
@@ -22,7 +22,7 @@ from training.online_segmentation_train import (
 
 PATHOCELL_ONLINE_CONFIG = (
     Path(__file__).resolve().parents[1]
-    / "configs/downstream/cellseg/pathocell/encoder/uni2.yaml"
+    / "configs/downstream/cell_semantic_segmentation/pathocell/encoder/uni2.yaml"
 )
 
 
@@ -56,7 +56,7 @@ def test_pathocell_online_config_pfmb_settings():
     assert raw["head"]["use_z0"] is True
     assert raw["training"]["global_batch_size"] == 128
     assert raw["data"]["online_sampling"]["global_batch_size"] == 128
-    assert "gradient_accumulation" not in raw["training"]
+    assert raw["training"]["gradient_accumulation"] == 1
     assert raw["training"]["training_steps"] == 20000
     assert raw["training"]["val_interval"] == 200
     assert raw["training"]["early_stopping"] == 1200
@@ -73,7 +73,7 @@ def test_pathocell_online_bundle_loads():
     exp, cfg = load_online_eval_bundle(PATHOCELL_ONLINE_CONFIG)
     assert cfg.task == "cell_semantic_segmentation"
     assert cfg.head == "unetr"
-    _assert_pathocell_benchmark_protocol(cfg)
+    _assert_pathocell_segmentation_head(cfg)
     assert exp.pathocell_tiling == "pfmb"
     assert exp.model == "uni2"
     assert resolve_num_classes(cfg, exp) >= 2
@@ -147,10 +147,10 @@ def test_pathocell_uniform_class_sampler():
     samples = load_split_samples(cfg, split_filter="train", max_samples=2)
     if not samples:
         return
-    sampler = PathoCellOnlineSampler(
+    sampler = HDFTileBatchSampler(
         _mini_exp(),
         samples,
-        transform=None,
+        image_transform=None,
         batch_size=2,
         seed=0,
         uniform_class_sampling=True,
@@ -158,8 +158,8 @@ def test_pathocell_uniform_class_sampler():
         exclude_classes=[0],
         sample_excluded_classes=False,
     )
-    assert sampler._patch_weights is not None
-    assert sampler._patch_weights.shape[0] == len(sampler.patch_refs)
+    assert sampler._tile_weights is not None
+    assert sampler._tile_weights.shape[0] == len(sampler.tile_refs)
     batch = sampler.next_batch()
     assert batch["image"].shape[0] == 2
     assert batch["semantic_mask"].shape[0] == 2

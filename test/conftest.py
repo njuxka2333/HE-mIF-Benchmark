@@ -86,9 +86,9 @@ def sync_save(monkeypatch):
             mask_dtype=kwargs.get("mask_dtype", "uint8"),
         )
 
-    monkeypatch.setattr("feature_extraction.extract_features_fp.save_feature_subprocess", _save_feature)
-    monkeypatch.setattr("feature_extraction.extract_features_fp.save_hdf5_subprocess", _save_h5)
-    monkeypatch.setattr("feature_extraction.extract_features_fp.save_patch_bag_h5_subprocess", _save_patch_bag)
+    monkeypatch.setattr("feature_extraction.engine.save_tensor_subprocess", _save_feature)
+    monkeypatch.setattr("feature_extraction.engine.save_hdf5_subprocess", _save_h5)
+    monkeypatch.setattr("feature_extraction.engine.save_patch_bag_subprocess", _save_patch_bag)
 
 
 def rosie_weights_path() -> Path:
@@ -271,7 +271,7 @@ def patch_test_dataset_loader(monkeypatch):
 
     monkeypatch.setattr(experiment_loader, "get_dataset_config", _get)
     monkeypatch.setattr(dataset_loader, "get_dataset_config", _get)
-    monkeypatch.setattr("feature_extraction.extract_features_fp.load_split_samples", _load)
+    monkeypatch.setattr("feature_extraction.engine.load_split_samples", _load)
 
 
 def load_dataset_samples(

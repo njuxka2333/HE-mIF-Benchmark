@@ -13,7 +13,7 @@ from pathlib import Path
 BENCHMARK_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BENCHMARK_ROOT))
 
-from data.hooknet_tls import (  # noqa: E402
+from data.hooknet_tls.planning import (  # noqa: E402
     DEFAULT_PATCH_SIZE_L0,
     apply_manifest_selection,
     build_slide_patch_plan,
@@ -39,13 +39,13 @@ from data.loader import get_dataset_config  # noqa: E402
 from PIL import Image  # noqa: E402
 
 
-def _default_split_csv(hooknet_root: Path) -> Path:
+def _default_split_csv() -> Path:
     from utils.paths import SPLITS_ROOT
 
-    official = SPLITS_ROOT / "tls_seg" / "hooknet-tls_split.csv"
-    if official.is_file():
-        return official
-    return hooknet_root / "hooknet-tls_split.csv"
+    official = SPLITS_ROOT / "tls_region_segmentation" / "hooknet_tls" / "slide_split.csv"
+    if not official.is_file():
+        raise FileNotFoundError(f"frozen HookNet-TLS split is missing: {official}")
+    return official
 
 
 def _parse_args() -> argparse.Namespace:
@@ -61,7 +61,7 @@ def _parse_args() -> argparse.Namespace:
         "--split-csv",
         type=Path,
         default=None,
-        help="hooknet-tls_split.csv (default: splits/tls_seg/hooknet-tls_split.csv)",
+        help="slide_split.csv (default: splits/tls_region_segmentation/hooknet_tls/slide_split.csv)",
     )
     parser.add_argument(
         "--hooknet-root",
@@ -146,7 +146,7 @@ def _run_preview(args: argparse.Namespace) -> None:
         raise SystemExit("preview mode requires --slide-id")
 
     cfg = get_dataset_config(args.dataset, str(args.data_config))
-    split_csv = args.split_csv or _default_split_csv(args.hooknet_root)
+    split_csv = args.split_csv or _default_split_csv()
     row = load_slide_row_from_split(split_csv, args.slide_id)
     wsi_path, xml_path, split = resolve_slide_paths(cfg, args.slide_id, row)
 
@@ -187,7 +187,7 @@ def _run_preview(args: argparse.Namespace) -> None:
             rec.patch_size,
             backend=args.backend,
         )
-        from data.hooknet_tls_wsd import load_official_wsa
+        from data.hooknet_tls.annotations import load_official_wsa
 
         wsa = load_official_wsa(plan.xml_path, backend=args.backend)
         mask = rasterize_patch_mask(wsa, rec.x_level0, rec.y_level0, rec.patch_size)
@@ -267,7 +267,7 @@ def _materialize_records(
 
 def _run_extract(args: argparse.Namespace) -> None:
     cfg = get_dataset_config(args.dataset, str(args.data_config))
-    split_csv = args.split_csv or _default_split_csv(args.hooknet_root)
+    split_csv = args.split_csv or _default_split_csv()
     out = args.output_dir.expanduser().resolve()
     rest_keep_fraction, random_seed = _resolve_build_params(args)
     patch_size = int(args.patch_size)

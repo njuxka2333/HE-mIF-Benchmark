@@ -9,7 +9,7 @@ full 5-fold run.
 Example::
 
     python scripts/build_tcga_coad_cv_splits.py \\
-      --base-split-csv ../splits/prognosis_os/tcga_coad_split.csv \\
+      --base-split-csv ../splits/prognosis/tcga_coad/slide_split.csv \\
       --n-folds 5 \\
       --seed 42
 """
@@ -35,7 +35,7 @@ def build_cv_splits(
     event_column: str = "PFI.1",
     valid_fraction: float = 0.2,
     output_dir: str | Path | None = None,
-    output_pattern: str = "tcga_coad_split_cv{n_folds}_outer_fold{fold}.csv",
+    output_pattern: str = "fold_{fold}.csv",
 ) -> list[Path]:
     base_path = Path(base_split_csv).expanduser().resolve()
     if not base_path.is_file():
@@ -137,7 +137,7 @@ def build_cv_splits(
         "output_pattern": output_pattern,
         "folds": manifest_folds,
     }
-    manifest_path = out_dir / f"tcga_coad_split_cv{n_folds}_manifest.json"
+    manifest_path = out_dir / "manifest.json"
     with manifest_path.open("w", encoding="utf-8") as handle:
         json.dump(manifest, handle, indent=2)
     print(f"[manifest] {manifest_path}")
@@ -214,7 +214,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build TCGA-COAD stratified k-fold split CSVs")
     parser.add_argument(
         "--base-split-csv",
-        default="/data3/houjunlin/fxx/HE-mIF-Benchmark/splits/prognosis_os/tcga_coad_split.csv",
+        default=str(Path(__file__).resolve().parents[2] / "splits/prognosis/tcga_coad/slide_split.csv"),
     )
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--n-folds", type=int, default=5)
@@ -224,7 +224,7 @@ def main() -> None:
     parser.add_argument("--valid-fraction", type=float, default=0.2)
     parser.add_argument(
         "--output-pattern",
-        default="tcga_coad_split_cv{n_folds}_outer_fold{fold}.csv",
+        default="fold_{fold}.csv",
     )
     args = parser.parse_args()
     build_cv_splits(

@@ -1,12 +1,10 @@
 """One entrance for a whole task: train every arm, then post-process them together.
 
 ``training.train`` runs one config. ``training.postprocess`` turns a finished
-set of runs into the reported statistics. Virtual staining, TLS, and cell
-semantic segmentation then write the paper example tiles. Neither is the unit a
-person actually works in - the unit is a *task*: all arms of a downstream task,
-then the comparison across them. This module is that unit, so a task is
-reproduced with one command instead of a hand-written loop plus a remembered
-follow-up::
+set of runs into the reported statistics. The unit a person works in is a
+*task*: all arms of a downstream task, then the comparison across them. This
+module is that unit, so a task is reproduced with one command instead of a
+hand-written loop plus a remembered follow-up::
 
     python -m training.pipeline --task virtual_staining --significance
     python -m training.pipeline --task prognosis --models uni2
@@ -56,33 +54,24 @@ install_pca_hook()
 
 # task -> (config subdirectory, postprocessor key or None)
 TASKS = {
-    "single_cell_classification": ("linear_probe", "single_cell_classification"),
-    "single_cell_classification_hoptimus": ("linear_probe_hoptimus", "single_cell_classification"),
-    "single_cell_classification_pca": ("linear_probe_pca", "single_cell_classification"),
+    "single_cell_classification": ("single_cell_classification", "single_cell_classification"),
+    "single_cell_classification_hoptimus": ("single_cell_classification_hoptimus", "single_cell_classification"),
+    "single_cell_classification_pca": ("single_cell_classification_pca", "single_cell_classification"),
     "prognosis": ("prognosis", "prognosis"),
-    "prognosis_pca": ("prognosis_pca", "prognosis"),
     "virtual_staining": ("virtual_staining", "virtual_staining"),
-    "cell_semantic_segmentation": ("cellseg", "cell_semantic_segmentation"),
-    "cell_semantic_segmentation_hoptimus": ("cellseg_hoptimus", "cell_semantic_segmentation"),
-    "tls_region_segmentation": ("tls", "tls_region_segmentation"),
-    "tls_region_segmentation_hoptimus": ("tls_hoptimus", "tls_region_segmentation"),
+    "cell_semantic_segmentation": ("cell_semantic_segmentation", "cell_semantic_segmentation"),
+    "tls_region_segmentation": ("tls_region_segmentation/hooknet_tls", "tls_region_segmentation"),
 }
 
 # Encoder-width and frozen-backbone controls; not part of the paper table.
 SUPPLEMENTARY_TASKS = {
     "single_cell_classification_hoptimus",
     "single_cell_classification_pca",
-    "prognosis_pca",
-    "cell_semantic_segmentation_hoptimus",
-    "tls_region_segmentation_hoptimus",
 }
 
 SUPPLEMENTARY_RESULTS_ROOT = {
     "single_cell_classification_hoptimus": "scc_hoptimus",
     "single_cell_classification_pca": "scc_pca",
-    "prognosis_pca": "prognosis_pca",
-    "cell_semantic_segmentation_hoptimus": "cellseg_hoptimus",
-    "tls_region_segmentation_hoptimus": "tls_hoptimus",
 }
 
 # Order matters only for --all: cheap audits first, so a broken evaluation grid
@@ -196,21 +185,6 @@ def run_task(task: str, args) -> dict:
             if narrowed:
                 print("    (statistics are rebuilt from every arm on disk, not only the ones just run)")
             _postprocess._POSTPROCESSORS[key](args)
-        if not args.dry_run and task in {
-            "virtual_staining",
-            "cell_semantic_segmentation",
-            "tls_region_segmentation",
-        }:
-            from training.example_tiles import render_task_example_tiles
-
-            print(f"\n--- example tiles: {task} ---")
-            try:
-                render_task_example_tiles(task, args)
-            except Exception as exc:  # noqa: BLE001
-                failed.append(("example_tiles", repr(exc)))
-                print(f"    FAILED: {exc!r}", flush=True)
-                if not args.continue_on_error:
-                    raise
         return {"task": task, "n_configs": len(configs), "trained": trained, "failed": failed}
     finally:
         args.results_root = orig_results_root

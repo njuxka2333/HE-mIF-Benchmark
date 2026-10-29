@@ -20,7 +20,7 @@ import torch
 import torch.nn as nn
 
 from heads.cellseg import DEFAULT_DECODER_CHANNELS, CellsegUNETR
-from mif.resample import resample_mif_stack
+from utils.marker_stack import resample_mif_stack
 
 __all__ = [
     "DEFAULT_FEATURE_LAYERS",

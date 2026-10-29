@@ -1,5 +1,5 @@
-"""Dataset IO for the benchmark.
+"""Dataset manifests and task-specific input pipelines.
 
-WSI / FOV / split tables live here (``loader``, PathoCell, HookNet-TLS, mIF).
-Extracted feature bags used by offline training are ``data.feature_bags``.
+Shared geometry and image conversion live at this level. Dataset-specific
+readers and samplers are grouped in ``hooknet_tls`` and ``pathocell``.
 """

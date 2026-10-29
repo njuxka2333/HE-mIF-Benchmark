@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build TCGA-COAD ``tcga_coad_split.csv`` with a 7:1:2 train/valid/test split.
+"""Build TCGA-COAD ``slide_split.csv`` with a 7:1:2 train/valid/test split.
 
 Prognosis features for stratification come from TCGA Pan-Cancer Clinical Data Resource
 (Liu et al.) ``ExtraEndpoints`` sheet (``PFI.*``, ``PFS*``, ``*_cr``, and ``*.time*``).
@@ -444,6 +444,7 @@ def build_tcga_coad_split(
 
     prognosis = load_coad_prognosis(cdr_path)
     slides = _discover_slides(dataset_name=dataset_name)
+    dataset_cfg = get_dataset_config(dataset_name)
 
     by_case: dict[str, list[SlideRecord]] = defaultdict(list)
     for rec in slides:
@@ -466,12 +467,16 @@ def build_tcga_coad_split(
         split = assignment[case]
         prog = prognosis[case]
         for rec in sorted(by_case[case], key=lambda r: r.slide_id):
+            try:
+                relative_wsi_path = rec.wsi_path.relative_to(dataset_cfg.dataset_dir)
+            except ValueError:
+                relative_wsi_path = Path(dataset_cfg.wsi_subdir) / rec.wsi_path.name
             row = {
                 "slide_id": rec.slide_id,
                 "case_id": rec.case_id,
                 "split": split,
                 "label": "",
-                "wsi_path": str(rec.wsi_path),
+                "wsi_path": relative_wsi_path.as_posix(),
             }
             for col in PROGNOSIS_COLS:
                 val = prog.get(col)
@@ -504,7 +509,7 @@ def build_tcga_coad_split(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build TCGA-COAD tcga_coad_split.csv")
+    parser = argparse.ArgumentParser(description="Build TCGA-COAD slide_split.csv")
     parser.add_argument(
         "--dataset-root",
         default="/data3/houjunlin/fxx/datasets/TCGA_COAD",
@@ -513,7 +518,7 @@ def main() -> None:
     parser.add_argument(
         "--output-csv",
         default=None,
-        help="Output CSV (default: HE-mIF-Benchmark/splits/prognosis_os/tcga_coad_split.csv).",
+        help="Output CSV (default: HE-mIF-Benchmark/splits/prognosis/tcga_coad/slide_split.csv).",
     )
     parser.add_argument(
         "--cdr-xlsx",
@@ -527,7 +532,7 @@ def main() -> None:
     out = (
         Path(args.output_csv).expanduser().resolve()
         if args.output_csv
-        else Path("/data3/houjunlin/fxx/HE-mIF-Benchmark/splits/prognosis_os/tcga_coad_split.csv")
+        else Path(__file__).resolve().parents[2] / "splits/prognosis/tcga_coad/slide_split.csv"
     )
     build_tcga_coad_split(
         root,

@@ -30,7 +30,7 @@ class _IdentityExtractor(torch.nn.Module):
 
 
 def test_plan_split_runs_defaults_to_three_subfolders():
-    import feature_extraction.extract_features_fp as extract_features
+    import feature_extraction.engine as extract_features
 
     assert extract_features.plan_split_runs(None, None) == [
         ("train", "train"),
@@ -44,7 +44,7 @@ def test_plan_split_runs_defaults_to_three_subfolders():
 
 
 def test_run_loader_concatenates_batches():
-    import feature_extraction.extract_features_fp as extract_features
+    import feature_extraction.engine as extract_features
 
     class _FakeLoader:
         def __iter__(self):
@@ -70,7 +70,7 @@ def test_run_loader_concatenates_batches():
 
 
 def test_save_outputs_writes_coords_and_masks(tmp_path, sync_save):
-    import feature_extraction.extract_features_fp as extract_features
+    import feature_extraction.engine as extract_features
 
     exp = load_experiment_config(EXPERIMENTS_DIR / "abmil_tcga_coad_mipheivit_20x_s256.yaml")
     exp.feat_dir = tmp_path
@@ -98,7 +98,7 @@ def test_save_outputs_writes_coords_and_masks(tmp_path, sync_save):
 
 
 def test_save_outputs_patch_h5_mode(tmp_path, sync_save):
-    import feature_extraction.extract_features_fp as extract_features
+    import feature_extraction.engine as extract_features
     import h5py
 
     from utils.file_utils import is_patch_bag_h5
@@ -127,7 +127,7 @@ def test_save_outputs_patch_h5_mode(tmp_path, sync_save):
 @pytest.mark.integration
 @pytest.mark.requires_weights
 def test_wsi_extraction_smoke(device, sync_save, monkeypatch):
-    import feature_extraction.extract_features_fp as extract_features
+    import feature_extraction.engine as extract_features
 
     exp = load_experiment_config(EXPERIMENTS_DIR / WSI_SMOKE_CONFIG)
     ensure_model_weights(exp.model)
@@ -140,9 +140,9 @@ def test_wsi_extraction_smoke(device, sync_save, monkeypatch):
     h5_path = cfg.coords_dir() / f"{sample.sample_id}.h5"
     assert h5_path.is_file()
 
-    monkeypatch.setattr(extract_features, "get_wsi_handle", lambda _path: MockWsiHandle())
+    monkeypatch.setattr(extract_features, "open_wsi", lambda _path: MockWsiHandle())
     monkeypatch.setattr(
-        "feature_extraction.extract_features_fp.DataLoader",
+        "feature_extraction.engine.DataLoader",
         lambda *args, **kwargs: DataLoader(*args, **{**kwargs, "num_workers": 0}),
     )
 

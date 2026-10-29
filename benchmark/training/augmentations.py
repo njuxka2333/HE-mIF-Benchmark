@@ -129,7 +129,9 @@ def _build_transform(name: str, params: dict[str, Any] | None) -> nn.Module:
     if name == "RandomElasticTransform":
         for key in ("kernel_size", "sigma", "alpha"):
             if key in params and isinstance(params[key], list):
-                params[key] = torch.tensor(params[key])
+                # Kornia expects 2-tuples for these ranges. Converting YAML
+                # lists to tensors breaks its scalar/range validation.
+                params[key] = tuple(params[key])
 
     if hasattr(Kaug, name):
         return getattr(Kaug, name)(**params)

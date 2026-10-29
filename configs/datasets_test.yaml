@@ -4,7 +4,7 @@ datasets:
   pathocell:
     dataset_dir: /data3/houjunlin/fxx/datasets/PathoCell
     mask_dir: null
-    split: splits/cell_semantic_seg/phenocell_dataset_split.csv
+    split: splits/cell_semantic_segmentation/pathocell/slide_split.csv
     split_level: slide
     label_dict: data/phenocell/label_dict.json
     mode: patch_hdf
@@ -20,7 +20,7 @@ datasets:
   pathocell_online:
     dataset_dir: /data3/houjunlin/fxx/datasets/PathoCell
     mask_dir: null
-    split: splits/cell_semantic_seg/phenocell_dataset_split.csv
+    split: splits/cell_semantic_segmentation/pathocell/slide_split.csv
     split_level: slide
     label_dict: data/phenocell/label_dict.json
     mode: patch_hdf
@@ -36,7 +36,7 @@ datasets:
   lizard:
     dataset_dir: /data3/houjunlin/fxx/datasets/lizard
     mask_dir: null
-    split: splits/cell_semantic_seg/lizard_split.csv
+    split: splits/cell_semantic_segmentation/lizard/slide_split.csv
     split_level: slide
     label_dict: lizard_label_dict.json
     mode: patch_hdf
@@ -52,7 +52,7 @@ datasets:
   lizard_online:
     dataset_dir: /data3/houjunlin/fxx/datasets/lizard
     mask_dir: null
-    split: splits/cell_semantic_seg/lizard_split.csv
+    split: splits/cell_semantic_segmentation/lizard/slide_split.csv
     split_level: slide
     label_dict: lizard_label_dict.json
     mode: patch_hdf
@@ -68,7 +68,7 @@ datasets:
   hooknet_tls:
     dataset_dir: /data3/houjunlin/fxx/datasets/HookNet_TLS
     mask_dir: /data3/houjunlin/fxx/datasets/HookNet_TLS/masks
-    split: splits/tls_seg/hooknet-tls_split.csv
+    split: splits/tls_region_segmentation/hooknet_tls/slide_split.csv
     split_level: slide
     label_dict: label_dict.json
     mode: wsi
@@ -84,10 +84,11 @@ datasets:
   tcga_luad:
     dataset_dir: /data3/houjunlin/fxx/datasets/TCGA_LUAD
     mask_dir: null
-    split: splits/prognosis_os/tcga_luad_split.csv
+    split: splits/prognosis/tcga_luad/slide_split.csv
     split_level: slide
     mode: wsi
     wsi_subdir: WSIs
+    recursive_wsi: true
     coords_subdir: patches
     slide_ext: .svs
     columns:
@@ -97,10 +98,11 @@ datasets:
   tcga_coad:
     dataset_dir: /data3/houjunlin/fxx/datasets/TCGA_COAD
     mask_dir: null
-    split: splits/prognosis_os/tcga_coad_split.csv
+    split: splits/prognosis/tcga_coad/slide_split.csv
     split_level: slide
     mode: wsi
     wsi_subdir: WSIs
+    recursive_wsi: true
     coords_subdir: patches
     slide_ext: .svs
     columns:
@@ -110,7 +112,7 @@ datasets:
   nucls:
     dataset_dir: /data3/houjunlin/fxx/datasets/NuCLS/cell_patches_64
     mask_dir: null
-    split: splits/single_cell_cls/nucls/nucls_cell_split_fold1.csv
+    split: splits/single_cell_classification/nucls/fold_1.csv
     split_level: case
     label_dict: label_dict.json
     mode: patch
@@ -124,13 +126,13 @@ datasets:
   immunocto:
     dataset_dir: /jhcnas5/houjunlin/multiplexed/Other/ImmunoctoV1
     mask_dir: null
-    split: splits/single_cell_cls/immunocto/immunocto_patient_split.csv
+    split: splits/single_cell_classification/immunocto/patient_split.csv
     split_level: case
     label_dict: label_dict.json
     mode: patch
     manifest_format: immunocto_compact
-    patient_split: splits/single_cell_cls/immunocto/immunocto_patient_split.csv
-    excluded_paths: splits/single_cell_cls/immunocto/immunocto_train_other_excluded.csv
+    patient_split: splits/single_cell_classification/immunocto/patient_split.csv
+    excluded_paths: splits/single_cell_classification/immunocto/other_excluded.csv.gz
     native_mpp: 0.25
     columns:
       case_id: patient_id
@@ -140,7 +142,7 @@ datasets:
   cell_niches:
     dataset_dir: /data3/houjunlin/fxx/datasets/cell_niches_paired_patches
     mask_dir: null
-    split: splits/virtual_staining/patches.csv
+    split: splits/virtual_staining/cell_niches/patches.csv
     split_level: slide
     mode: patch
     native_mpp: 0.5

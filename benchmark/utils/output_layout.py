@@ -39,7 +39,7 @@ def ensure_output_dirs(layout_name: str, feat_dir: str, model: str, config_path:
 
 
 def legacy_prepath_dirs(feat_dir: str, model: str) -> Dict[str, Path]:
-    """Original PrePATH directory structure used by feature_extraction/run_fp_fast.py."""
+    """Original PrePATH directory structure retained for published feature bags."""
     base = Path(feat_dir)
     return {
         "pt_dir": base / "pt_files" / model,

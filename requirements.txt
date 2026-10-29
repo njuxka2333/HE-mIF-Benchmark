@@ -20,3 +20,5 @@ pytest
 shapely
 openslide-python
 einops
+kornia
+scikit-survival

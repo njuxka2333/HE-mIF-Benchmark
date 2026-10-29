@@ -21,6 +21,7 @@ results/
 results_treatment_response/
 Evaluation/
 logs/
+/examples/
 
 # Upstream model checkouts cloned into this directory (see README)
 /rosie/

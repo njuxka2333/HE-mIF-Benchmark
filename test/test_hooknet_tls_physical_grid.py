@@ -1,6 +1,6 @@
 """Geometry invariants for canonical physical HookNet-TLS tiles."""
 
-from data.hooknet_tls_physical_grid import (
+from data.hooknet_tls.physical_grid import (
     physical_bounds_to_grid_indices,
     physical_fov_um,
     physical_grid_edges,

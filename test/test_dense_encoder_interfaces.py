@@ -21,24 +21,24 @@ from heads.vit_pyramid import ViTFeaturePyramidBuilder
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "configs/downstream"
 PRODUCTION_CONFIGS = {
     "gigatime": (
-        "cellseg/pathocell/encoder/gigatime.yaml",
-        "tls/encoder/gigatime.yaml",
+        "cell_semantic_segmentation/pathocell/encoder/gigatime.yaml",
+        "tls_region_segmentation/hooknet_tls/encoder/gigatime.yaml",
     ),
     "hemit": (
-        "cellseg/pathocell/encoder/hemit.yaml",
-        "tls/encoder/hemit.yaml",
+        "cell_semantic_segmentation/pathocell/encoder/hemit.yaml",
+        "tls_region_segmentation/hooknet_tls/encoder/hemit.yaml",
     ),
     "histoplexer": (
-        "cellseg/pathocell/encoder/histoplexer.yaml",
-        "tls/encoder/histoplexer.yaml",
+        "cell_semantic_segmentation/pathocell/encoder/histoplexer.yaml",
+        "tls_region_segmentation/hooknet_tls/encoder/histoplexer.yaml",
     ),
     "uni2": (
-        "cellseg/pathocell/encoder/uni2.yaml",
-        "tls/encoder/uni2.yaml",
+        "cell_semantic_segmentation/pathocell/encoder/uni2.yaml",
+        "tls_region_segmentation/hooknet_tls/encoder/uni2.yaml",
     ),
     "mipheivit": (
-        "cellseg/pathocell/encoder/mipheivit.yaml",
-        "tls/encoder/mipheivit.yaml",
+        "cell_semantic_segmentation/pathocell/encoder/mipheivit.yaml",
+        "tls_region_segmentation/hooknet_tls/encoder/mipheivit.yaml",
     ),
 }
 
@@ -59,7 +59,7 @@ def test_dense_tasks_share_canonical_interface_and_preprocessing(model):
     assert cell["experiment"]["target_features"] == expected["target_features"]
     assert cell["head"]["decoder_mode"] in {"pfmb", "cellseg"}
     assert tls["head"]["decoder_mode"] == "feature"
-    assert tls["run"]["official_sampling"]["fixed_grid_root"]
+    assert tls["run"]["fixed_grid_sampling"]["fixed_grid_root"]
 
 
 @pytest.mark.parametrize(
@@ -144,7 +144,7 @@ def test_pfmb_accepts_gigatime_five_level_native_interface():
 
 
 def test_tls_histoplexer_keeps_official_z2345_pyramid():
-    raw = _raw_config("tls/encoder/histoplexer.yaml")
+    raw = _raw_config("tls_region_segmentation/hooknet_tls/encoder/histoplexer.yaml")
     assert raw["head"]["decoder_mode"] == "feature"
     assert raw["experiment"]["target_features"] == ["z2", "z3", "z4", "z5"]
 

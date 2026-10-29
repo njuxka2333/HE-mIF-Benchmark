@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import numpy as np
 
-from data.pathocell_hdf import (
-    PATHOCELL_TILING_PFMB,
-    extract_pathocell_tile_triple_at_np,
-    pfmb_linspace_tiles,
-    plan_pathocell_tiles,
-    renumber_instance_tile,
+from data.tiling import (
+    PFMB_TILE_PROTOCOL,
+    extract_tile_arrays,
+    pfmb_grid,
+    plan_tiles,
+    renumber_instance_ids,
 )
 
 
 def test_pfmb_linspace_tile_count_matches_schuerch_fov():
     # Typical PathoCell FOV size at 20x.
-    tiles = pfmb_linspace_tiles(1440, 1920, 224)
+    tiles = pfmb_grid(1440, 1920, 224)
     assert len(tiles) == 63
 
 
@@ -23,17 +23,17 @@ def test_pfmb_tiling_center_pads_edge_tiles_to_read_size():
     volume = np.zeros((500, 500, 3), dtype=np.uint8)
     semantic = np.zeros((500, 500), dtype=np.int64)
     instance = np.zeros((500, 500), dtype=np.int64)
-    _, tiles = plan_pathocell_tiles(500, 500, 224, protocol=PATHOCELL_TILING_PFMB)
+    _, tiles = plan_tiles(500, 500, 224, protocol=PFMB_TILE_PROTOCOL)
     assert len(tiles) == 9
     for tile in tiles:
-        image, sem, inst = extract_pathocell_tile_triple_at_np(
+        image, sem, inst = extract_tile_arrays(
             volume,
             semantic,
             instance,
             tile,
             224,
             224,
-            protocol=PATHOCELL_TILING_PFMB,
+            protocol=PFMB_TILE_PROTOCOL,
         )
         assert image.shape == (224, 224, 3)
         assert sem.shape == (224, 224)
@@ -49,7 +49,7 @@ def test_pfmb_instance_renumber_per_tile():
         ],
         dtype=np.int64,
     )
-    renumbered = renumber_instance_tile(instance)
+    renumbered = renumber_instance_ids(instance)
     assert set(np.unique(renumbered).tolist()) == {0, 1, 2}
 
 
@@ -69,18 +69,18 @@ def test_pfmb_tiling_finds_all_quadrant_instances():
         semantic_hw[y, x] = inst_id
 
     label_dict = {0: "background", 1: "c1", 2: "c2", 3: "c3", 4: "c4"}
-    _, tiles = plan_pathocell_tiles(height, width, tile, protocol=PATHOCELL_TILING_PFMB)
+    _, tiles = plan_tiles(height, width, tile, protocol=PFMB_TILE_PROTOCOL)
 
     total = 0
     for tile_bounds in tiles:
-        _, semantic, instance = extract_pathocell_tile_triple_at_np(
+        _, semantic, instance = extract_tile_arrays(
             volume,
             semantic_hw,
             instance_hw,
             tile_bounds,
             tile,
             tile,
-            protocol=PATHOCELL_TILING_PFMB,
+            protocol=PFMB_TILE_PROTOCOL,
             renumber_instances=True,
         )
         oracle = np.stack([(semantic == cls).astype(np.float32) for cls in label_dict])

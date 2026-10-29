@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from feature_extraction.place_splits import cleanup_unique_wsi_files
+from feature_extraction.fold_placement import cleanup_unique_wsi_files
 from feature_extraction.protocol import (
     dataset_protocol,
     encoder_dir,
@@ -77,7 +77,7 @@ def test_experiment_config_default_layer_dirs_use_protocol(tmp_path):
 
 
 def test_place_wsi_split_writes_train_test_and_drops_folds(tmp_path):
-    from feature_extraction.place_splits import (
+    from feature_extraction.fold_placement import (
         empty_stats,
         index_wsi_bags,
         place_wsi_split,
@@ -136,7 +136,7 @@ def test_place_cv_wsi_hardlinks_valid_equals_test(tmp_path):
 
     ds = dataset_protocol("tcga_coad")
     # Use local fold CSVs instead of production ones.
-    from feature_extraction.place_splits import place_cv_wsi, index_wsi_bags, empty_stats
+    from feature_extraction.fold_placement import place_cv_wsi, index_wsi_bags, empty_stats
 
     stats = empty_stats()
     place_cv_wsi(

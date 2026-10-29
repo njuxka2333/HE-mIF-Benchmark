@@ -59,7 +59,7 @@ def test_shazam_survival_abmil_forward_bias_free_attention_and_alpha_loss():
     assert torch.isfinite(loss)
 
 
-def test_shazam_bins_use_split_local_quantiles_with_zero_inf_edges():
+def test_survival_bins_use_split_local_quantiles_with_finite_outer_edges():
     from data.feature_bags import _survival_labels
 
     split = pd.DataFrame(
@@ -75,11 +75,10 @@ def test_shazam_bins_use_split_local_quantiles_with_zero_inf_edges():
         event_column="event",
         n_bins=4,
         event_positive_values=[1],
-        bin_frame=split.assign(event=split["event"]),
-        bin_policy="shazam_split",
+        bin_frame=split,
     )
-    assert bins[0] == 0.0
-    assert np.isinf(bins[-1])
+    assert bins[0] == split["time"].min() - 1e-6
+    assert bins[-1] == split["time"].max() + 1e-6
     assert labelled["disc_label"].min() >= 0
     assert labelled["disc_label"].max() <= 3
 

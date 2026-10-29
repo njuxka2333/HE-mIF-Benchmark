@@ -1,47 +1,26 @@
 # HE–mIF Benchmark
 
-Six pathology models, one extraction protocol, five downstream tasks.
-YAML under `configs/` is the recipe. `splits/` is the frozen assignment of
-cases, cells, and tiles. `benchmark/` is the code. Licensed under MIT
-(`LICENSE`).
+This repository reproduces the HE-to-multiplex immunofluorescence benchmark across six pathology models and five downstream tasks. The published data assignments are versioned in `splits/`; experiment recipes are in `configs/`; executable pipelines are in `benchmark/`.
 
-Official entrance: `python -m training.pipeline` with
-`PYTHONPATH` pointing at `benchmark/` (and ASlide when needed).
-One YAML is `python -m training.train --config …`. Feature bags are
-`python -m feature_extraction.extract`. Local patches are
-`python -m preprocessing.build --dataset …`.
-Do not launch a paper rerun from `Evaluation/` — that folder is scratch
-written by a local run.
+## Tasks and datasets
 
-## What this repo contains
+| Task | Dataset(s) | Main evaluation |
+|---|---|---|
+| Virtual staining | Cell-niches | CD3 Spearman correlation and AUPRC |
+| Single-cell classification | Immunocto, NuCLS | Linear-probe AUROC |
+| Prognosis | TCGA-COAD, TCGA-LUAD | Five-fold C-index |
+| TLS region segmentation | HookNet-TLS | Macro F1 |
+| Cell semantic segmentation | PathoCell, Lizard | Instance-level macro F1 |
 
-| Path | Role |
-|------|------|
-| `benchmark/` | Core code (training, models, data, metrics, …) |
-| `configs/` | YAML recipes (datasets, models, downstream, extraction) |
-| `test/` | Pytest suite |
-| `splits/` | Frozen train/valid/test tables |
+## Requirements and setup
 
-Not in git (created locally when you run; do **not** `git add`):
-
-| Path | Role |
-|------|------|
-| `checkpoints/` | Weights that are not loaded from Hugging Face |
-| `Pre_Features/` | Extracted feature bags |
-| `results/` | Frozen paper tables (local snapshot; not required to rerun) |
-| `Evaluation/` | Scratch train dirs and example tiles for this clone |
-
-## Setup
-
-Python 3.10+ with a CUDA PyTorch wheel. From this directory:
+Use Python 3.10 or 3.11 and install the Python dependencies:
 
 ```bash
 python -m pip install -r requirements.txt
-cp .env.example .env   # then set HF_TOKEN (GigaTIME, UNI2-h, and H-optimus-0 are gated)
 ```
 
-Before a run, clone the upstream model repos **into this directory** (UNI2
-has no code checkout; it loads from Hugging Face):
+Several model adapters use their upstream source repositories. Clone the required repositories at the project root; UNI2 loads through Hugging Face and does not require a source checkout.
 
 ```bash
 git clone https://gitlab.com/enable-medicine-public/rosie.git rosie
@@ -53,192 +32,61 @@ git clone https://github.com/ratschlab/HistoPlexer.git HistoPlexer
 git clone https://github.com/MrPeterJin/ASlide ASlide
 ```
 
-Then:
+Set the benchmark package and upstream ASlide on `PYTHONPATH`, then configure local dataset locations:
 
 ```bash
-export PYTHONDONTWRITEBYTECODE=1
 export PYTHONPATH="$PWD/benchmark:$PWD/ASlide${PYTHONPATH:+:$PYTHONPATH}"
 export HE_MIF_DATASETS_ROOT=/path/to/datasets
-# Optional override; default is $PWD/checkpoints
-# export HE_MIF_CKPT_DIR=/path/to/checkpoints
-# Immunocto is not under the datasets root on the original machine:
+# Set individually when a dataset is stored outside HE_MIF_DATASETS_ROOT:
 # export PREPATH_DATASET_IMMUNOCTO_DIR=/path/to/ImmunoctoV1
-# Cell-niches raw HE/mIF FOVs (needed only to rebuild paired patches):
+# Cell-niches source FOVs are needed only to rebuild paired patches:
 # export HE_MIF_CELL_NICHES_RAW=/path/to/Cell-niches-data
 ```
 
-`configs/datasets.yaml` still lists this lab's absolute paths. Setting
-`HE_MIF_DATASETS_ROOT` remaps anything under `/data3/houjunlin/fxx/datasets`.
-Override one dataset with `PREPATH_DATASET_<NAME>_DIR` (name uppercased).
-`HE_MIF_CELL_NICHES_RAW` is required off this machine to rebuild Cell-niches
-tiles. Leftover YAML paths that still name this lab's clone are remapped to
-the current repository root.
+`HE_MIF_DATASETS_ROOT` contains the dataset folders named in `configs/datasets.yaml`. A dataset-specific `PREPATH_DATASET_<NAME>_DIR` variable overrides its folder. Place local model weights in `checkpoints/`, or set `HE_MIF_CKPT_DIR` to use another directory. UNI2-h, GigaTIME, and the H-optimus-0 backbone require access to their gated Hugging Face repositories. Authenticate with Hugging Face and set `HF_TOKEN` before loading them.
 
-## Checkpoints
+| Model | Local checkpoint name | Source |
+|---|---|---|
+| UNI2-h | `uni2_pytorch_model.bin` | [MahmoodLab/UNI2-h](https://huggingface.co/MahmoodLab/UNI2-h) |
+| GigaTIME | `gigatime.pth` | [prov-gigatime/GigaTIME](https://huggingface.co/prov-gigatime/GigaTIME) |
+| MIPHEI-ViT | `mipheivit.safetensors` | [MIPHEI-ViT v1.0.0 release](https://github.com/Sanofi-Public/MIPHEI-ViT/releases/tag/v1.0.0) |
+| HEMIT | `hemit_v1.pth` | Official Google Drive file `1HNc-dj2ATN7gdAyOCy-lWe8_YQse2CTd` |
+| ROSIE | `rosie_best_model_single.pth` | [ericwu09/ROSIE](https://huggingface.co/ericwu09/ROSIE) |
+| HistoPlexer | `histoplexer.pt` | `HistoPlexer/demo/model/pytorch_model.pt` in the upstream repository |
 
-All local weights live in **this repo's** `checkpoints/` (override with
-`$HE_MIF_CKPT_DIR`). Do not keep a second copy outside the repo.
+## Prepare data
 
-```bash
-mkdir -p checkpoints
-```
-
-A file already in `checkpoints/` wins. GigaTIME / UNI2 / MIPHEI still fall
-back to Hub when that file is missing.
-
-| Model | Put this file in `checkpoints/` | How to get it |
-|-------|----------------------------------|---------------|
-| UNI2-h | `uni2_pytorch_model.bin` | Hugging Face `MahmoodLab/UNI2-h` (`pytorch_model.bin`). Gated; needs `HF_TOKEN`. |
-| GigaTIME | `gigatime.pth` | Hugging Face `prov-gigatime/GigaTIME` (`model.pth`). Gated; needs `HF_TOKEN`. |
-| MIPHEI-ViT | `mipheivit.safetensors` | GitHub release `v1.0.0` `model.safetensors`. Encoder `bioptimus/H-optimus-0` is gated on Hub and loaded by the MIPHEI code. |
-| HEMIT | `hemit_v1.pth` | Official Google Drive id `1HNc-dj2ATN7gdAyOCy-lWe8_YQse2CTd`. |
-| ROSIE | `rosie_best_model_single.pth` | Request `best_model_single.pth` from [ericwu09/ROSIE](https://huggingface.co/ericwu09/ROSIE) and rename it. |
-| HistoPlexer | `histoplexer.pt` | After cloning HistoPlexer: `cp HistoPlexer/demo/model/pytorch_model.pt checkpoints/histoplexer.pt`. |
+The repository includes split tables and tile catalogs, but not whole-slide images, image patches, or extracted features. Set dataset paths before preparing the required local assets. For example:
 
 ```bash
-# UNI2-h
-huggingface-cli download MahmoodLab/UNI2-h pytorch_model.bin --local-dir /tmp/uni2
-mv /tmp/uni2/pytorch_model.bin checkpoints/uni2_pytorch_model.bin
-
-# GigaTIME
-huggingface-cli download prov-gigatime/GigaTIME model.pth --local-dir /tmp/gigatime
-mv /tmp/gigatime/model.pth checkpoints/gigatime.pth
-
-# MIPHEI-ViT generator head
-wget -O checkpoints/mipheivit.safetensors \
-  https://github.com/Sanofi-Public/MIPHEI-ViT/releases/download/v1.0.0/model.safetensors
-
-# HEMIT
-pip install gdown
-gdown --id 1HNc-dj2ATN7gdAyOCy-lWe8_YQse2CTd -O checkpoints/hemit_v1.pth
-
-# ROSIE (after HF access is granted)
-huggingface-cli download ericwu09/ROSIE best_model_single.pth --local-dir /tmp/rosie
-mv /tmp/rosie/best_model_single.pth checkpoints/rosie_best_model_single.pth
-
-# HistoPlexer
-cp HistoPlexer/demo/model/pytorch_model.pt checkpoints/histoplexer.pt
-```
-
-## Reproduce a reported table
-
-From the repo root. Build local patch files from the frozen splits, extract
-features where the task is offline, then train.
-
-```bash
-python -m preprocessing.build --dataset tcga_coad
-python -m preprocessing.build --dataset tcga_luad
 python -m preprocessing.build --dataset hooknet_tls
 python -m preprocessing.build --dataset cell_niches
-python -m preprocessing.build --dataset lizard
-python -m preprocessing.build --dataset immunocto
-
-python -m feature_extraction.extract --dataset immunocto --model uni2 --layers all
-python -m training.pipeline --task single_cell_classification
-python -m training.pipeline --all
+python -m preprocessing.build --dataset tcga_coad
 ```
 
-`--models uni2` and `--route encoder` narrow one arm. `--test-only` evaluates
-an existing checkpoint. `training.postprocess` is called by the pipeline; it
-is not a separate entrance. PathoCell and NuCLS use the released patch files
-(`preprocessing.build` is a no-op for those names).
+Run only the preparation commands needed for the task and dataset. The corresponding dataset README under `splits/` documents the frozen catalog and preprocessing protocol.
 
-WSI extract uses `--num-workers 0`.
+## Run the benchmark
 
-A train command writes under `Evaluation/` (or the `run.output_dir` in that
-YAML). Copy a finished run into `results/` only when you intend to replace a
-published arm. Do not `git add` `results/`, `Pre_Features/`, or `checkpoints/`.
-
-The MIL / UNETR / linear-probe **training loops** themselves are archived
-CPython 3.10/3.11 bytecode under `benchmark/training/_orig_pyc/`, with thin
-Python wrappers that apply the paper patches. Source-level heads, metrics,
-routing, and YAML live next to those files. Use Python 3.10 or 3.11 to rerun
-the published numbers.
-
-### Virtual staining (Cell-niches)
-
-Protocol id is `cell_niches_shared`. Headline: CD3 Spearman + Otsu-AUPRC on
-the **8 µm** grid after a 4 µm mean-pool cache, 477 patches / 20 FOVs.
+Run one configured model or a whole task from the repository root:
 
 ```bash
+python -m training.train \
+  --config configs/downstream/cell_semantic_segmentation/pathocell/encoder/hemit.yaml
+python -m training.pipeline --task single_cell_classification
+python -m training.pipeline --task prognosis --models uni2
 python -m training.pipeline --task virtual_staining --significance
 ```
 
-Equivalent one-model call:
+`training.pipeline --all` runs the reported task suite. Add `--route encoder` or `--route output` to select a feature route, and `--test-only` to evaluate existing checkpoints. Feature extraction for offline tasks uses the experiment recipe and shared extraction protocol:
 
 ```bash
-python -m training.train --config configs/downstream/virtual_staining/cell_niches/output/rosie.yaml
+python -m feature_extraction.extract \
+  --config configs/experiments/abmil_tcga_coad_rosie_40x_s128.yaml
 ```
 
-Do not recut `splits/virtual_staining/patches.csv`. Generator feeds are
-paper-native. Rows are locked model order, not a Spearman ranking. Do not
-publish P/R/F1 at cutoff 0.5.
+Training and evaluation outputs are written to the configured output directory (normally `Evaluation/`). Extracted feature bags are stored under `Pre_Features/`. These outputs are local run artifacts and are not part of the frozen split tables.
 
-The pipeline writes the official example tiles after scoring:
+## Configuration and split layout
 
-- virtual staining → `Evaluation/virtual_staining/example_tile/`
-- TLS → `Evaluation/tls_seg/example_tile/`
-- cell semantic segmentation → `Evaluation/cell_semantic_seg/pathocell/example_tile/`
-
-## Models and layers
-
-| Model | Encoder | Virtual staining |
-|-------|---------|------------------|
-| UNI2 | `z4` | — |
-| MIPHEI-ViT | `z4` | `mif` |
-| HEMIT | `resnet_blocks` | `mif` |
-| HistoPlexer | `bottleneck` | `mif` |
-| GigaTIME | `x4_0` | `mif` |
-| ROSIE | `stage3` | `mif0` |
-
-Patch geometry for feature extraction is in
-`configs/extraction/protocol.yaml`. Online tasks (TLS / PathoCell /
-Lizard / Cell-niches) keep the native input size in each downstream YAML.
-UNI2 has no virtual-staining layer, so there is no `output/uni2.yaml`.
-
-## Tasks
-
-| Task | Datasets | Primary metric | Pipeline name |
-|------|----------|----------------|---------------|
-| Virtual staining | Cell-niches | CD3 Spearman + AUPRC @ 8 µm (`cell_niches_shared`) | `virtual_staining` |
-| Single-cell classification | Immunocto, NuCLS | linear-probe AUROC | `single_cell_classification` |
-| Prognosis | TCGA-COAD, TCGA-LUAD | mean 5-fold C-index, `hidden_dim=256` | `prognosis` |
-| TLS segmentation | HookNet-TLS | macro F1 | `tls_region_segmentation` |
-| Cell semantic segmentation | PathoCell, Lizard | instance macro F1 | `cell_semantic_segmentation` |
-
-COAD uses the Shazam 5-fold split. LUAD uses an OS-balanced 5-fold split. In
-every WSI CV fold, **valid = test**. TLS tiles are `splits/tls_seg/patches.csv`.
-
-## Tests
-
-```bash
-export PYTHONDONTWRITEBYTECODE=1
-export PYTHONPATH="$PWD/benchmark${PYTHONPATH:+:$PYTHONPATH}"
-python -m pytest test/test_configs.py test/test_pipeline.py test/test_train_router.py test/test_example_tiles.py test/test_shared_vstain_protocol.py test/test_vstain_significance.py test/test_vstain_metrics.py test/test_loader_tables.py
-```
-
-## Layout
-
-```
-benchmark/training/     load / train entry (pipeline, loops, YAML, example tiles)
-benchmark/training/_orig_pyc/  archived training-loop bytecode (Python 3.10/3.11)
-benchmark/heads/        MIL / UNETR / cellseg / mIF decoders
-benchmark/metrics/      classification, survival, segmentation, vstain, clinical stats
-benchmark/losses/
-benchmark/data/         WSI/FOV loaders + extracted feature bags
-benchmark/mif/          generated-mIF trainers + Cell-niches scorer
-benchmark/models/       wrappers + registry/schema; checkpoint I/O in utils/checkpoints.py
-configs/extraction/protocol.yaml
-configs/downstream/
-  linear_probe/{immunocto,nucls}/{encoder,output}/{model}.yaml
-  prognosis/{tcga_coad,tcga_luad}/{encoder,output}/{model}.yaml
-  tls/{encoder,output}/{model}.yaml
-  cellseg/{pathocell,lizard}/{encoder,output}/{model}.yaml
-  virtual_staining/cell_niches/output/{model}.yaml
-splits/          frozen case / cell / tile lists
-test/            pytest
-```
-
-Feature bags: Immunocto / NuCLS are `linear_probe`; TCGA COAD / LUAD are
-`wsi_cv` (`valid` hardlinked to `test`); TLS / PathoCell / Lizard /
-Cell-niches are online (no Pre_Features bags).
+Downstream configurations follow `configs/downstream/<task>/<dataset>/<route>/<model>.yaml`. Split files follow `splits/<task>/<dataset>/`, with names such as `slide_split.csv`, `fold_0.csv`, or a dataset-specific manifest name where the unit is not a slide. See [`configs/README.md`](configs/README.md) and [`splits/README.md`](splits/README.md) for the inventories and run instructions.

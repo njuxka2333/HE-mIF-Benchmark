@@ -21,7 +21,6 @@ training:
   significance: true  # CD3 shuffle-null (Spearman + AUPRC) and FOV-bootstrap AUPRC
   seed: 42
   batch_size: 1
-  num_previews: 8
 run:
   output_dir: ../Evaluation/virtual_staining/cell_niches/output/gigatime
   script: training.train

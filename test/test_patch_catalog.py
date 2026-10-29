@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from data.hooknet_tls import PatchPlanRecord, load_selected_tiles_csv, write_selected_tiles_csv
+from data.hooknet_tls.planning import PatchPlanRecord, load_selected_tiles_csv, write_selected_tiles_csv
 from data.patch_catalog import TLS_PATCH_FIELDS
 
 

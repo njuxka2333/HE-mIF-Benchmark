@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from data.hooknet_tls import IGNORE_LABEL
-from data.hooknet_tls_sampler import (
+from data.hooknet_tls.planning import IGNORE_LABEL
+from data.hooknet_tls.sampler import (
     extract_tls_pfmb_tile,
     tls_source_read_size,
 )
-from data.pathocell_hdf import pfmb_linspace_tiles
+from data.tiling import pfmb_grid
 
 
 def test_tls_read_size_matches_native_geometry():
@@ -21,7 +21,7 @@ def test_tls_read_size_matches_native_geometry():
 
 def test_pfmb_tiles_cover_canonical_cell_without_overlap():
     for read_size in (1024, 512, 256, 448):
-        tiles = pfmb_linspace_tiles(1024, 1024, read_size)
+        tiles = pfmb_grid(1024, 1024, read_size)
         covered = np.zeros((1024, 1024), dtype=np.int32)
         for y0, y1, x0, x1 in tiles:
             covered[y0:y1, x0:x1] += 1
@@ -34,7 +34,7 @@ def test_corner_label_survives_pfmb_tiles_not_center_crop():
     rgb = np.zeros((1024, 1024, 3), dtype=np.uint8)
     mask = np.zeros((1024, 1024), dtype=np.int64)
     mask[10:40, 10:40] = 2  # GC in the corner; a 512 center crop would drop it
-    tiles = pfmb_linspace_tiles(1024, 1024, 512)
+    tiles = pfmb_grid(1024, 1024, 512)
     found = False
     for tile in tiles:
         _image, out_mask = extract_tls_pfmb_tile(rgb, mask, tile, 512, 256)
@@ -48,7 +48,7 @@ def test_corner_label_survives_pfmb_tiles_not_center_crop():
 def test_short_edge_tile_is_padded_with_ignore():
     rgb = np.ones((1024, 1024, 3), dtype=np.uint8)
     mask = np.ones((1024, 1024), dtype=np.int64)
-    tiles = pfmb_linspace_tiles(1024, 1024, 448)
+    tiles = pfmb_grid(1024, 1024, 448)
     short = [t for t in tiles if (t[1] - t[0]) < 448 or (t[3] - t[2]) < 448]
     assert short
     image, out_mask = extract_tls_pfmb_tile(rgb, mask, short[0], 448, 224)
@@ -57,29 +57,29 @@ def test_short_edge_tile_is_padded_with_ignore():
     assert IGNORE_LABEL in set(np.unique(out_mask).tolist())
 
 
-def test_index_sampler_reads_one_real_canonical_tile():
+def test_fixed_grid_tile_sampler_reads_one_real_canonical_tile():
     from pathlib import Path
     from types import SimpleNamespace
 
-    from data.hooknet_tls_sampler import FixedGridIndexSampler
+    from data.hooknet_tls.sampler import FixedGridTileSampler
 
     root = Path("/data3/houjunlin/fxx/datasets/HookNet_TLS_fixed_grid_ps1024")
     if not (root / "patches.csv").is_file():
         return
-    exp = SimpleNamespace(target_patch_size=256, target_mpp=0.5, iterator_cpus=1)
-    official = SimpleNamespace(
+    experiment = SimpleNamespace(target_patch_size=256, target_mpp=0.5, iterator_cpus=1)
+    sampling = SimpleNamespace(
         fixed_grid_root=root,
         sampler_batch_size=2,
         seed=0,
         fixed_grid_min_selected_class_pixels=1,
         fixed_grid_max_resample_attempts=4,
     )
-    sampler = FixedGridIndexSampler(
-        exp, samples=None, official=official, transform=None, split="valid", patch_workers=1
+    sampler = FixedGridTileSampler(
+        experiment, sampling, image_transform=None, split="valid", patch_workers=1
     )
     try:
-        assert sampler.read_size == 512
-        assert len(sampler.tiles) == 4
+        assert sampler.tile_read_size == 512
+        assert len(sampler.tile_bounds) == 4
         assert len(sampler) == 4 * 3716 or len(sampler) > 4
         sampler.begin_full_pass()
         batch = sampler.next_batch()

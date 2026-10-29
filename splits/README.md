@@ -1,21 +1,18 @@
-# Frozen splits
+# Frozen data splits and catalogs
 
-These CSVs are the reported train/valid/test (and CV fold) assignments. Do not
-regenerate the **case** tables for a paper rerun. Patch pixels and CLAM coord
-bags are not in git: `python -m preprocessing.build --dataset …` writes them
-under `$HE_MIF_DATASETS_ROOT`.
+The files below define the sample assignments and tile catalogs used by the benchmark. Whole-slide images, patch pixels, and extracted feature bags are stored locally and are not included here. Build dataset-specific local assets with `python -m preprocessing.build --dataset <name>` after configuring the data paths.
 
-| task | files |
-|------|--------|
-| Single-cell | `single_cell_cls/immunocto/immunocto_patient_split.csv`, `immunocto_train_other_excluded.csv.gz`; `single_cell_cls/nucls/nucls_cell_split_fold1.csv` |
-| Prognosis | `prognosis_os/tcga_coad_split.csv`, `tcga_coad_split_shazam_fold{0-4}.csv`, `tcga_luad_split.csv`, `tcga_luad_split_cv5_os_balanced_fold{0-4}.csv` |
-| TLS | `tls_seg/hooknet-tls_split.csv` (slide split) plus `tls_seg/patches.csv` (tile crop boxes used by `preprocessing.build`) |
-| Cell semantic | `cell_semantic_seg/phenocell_dataset_split.csv`, `lizard_split.csv` |
-| Virtual staining | `virtual_staining/patches.csv` (Cell-niches 256 µm patches, with HE/mIF boxes) |
+| Task | Dataset | Files |
+|---|---|---|
+| Cell semantic segmentation | PathoCell | `cell_semantic_segmentation/pathocell/slide_split.csv` |
+| Cell semantic segmentation | Lizard | `cell_semantic_segmentation/lizard/slide_split.csv` |
+| Single-cell classification | Immunocto | `single_cell_classification/immunocto/patient_split.csv`, `cell_index.csv.gz`, `other_excluded.csv.gz` |
+| Single-cell classification | NuCLS | `single_cell_classification/nucls/fold_1.csv` |
+| Prognosis | TCGA-COAD | `prognosis/tcga_coad/slide_split.csv`, `fold_0.csv`–`fold_4.csv` |
+| Prognosis | TCGA-LUAD | `prognosis/tcga_luad/slide_split.csv`, `fold_0.csv`–`fold_4.csv` |
+| TLS region segmentation | HookNet-TLS | `tls_region_segmentation/hooknet_tls/slide_split.csv`, `patches.csv` |
+| Virtual staining | Cell-niches | `virtual_staining/cell_niches/patches.csv` |
 
-Immunocto `cell_index.csv` and `immunocto_train_other_excluded.csv` are over
-GitHub's 100 MB limit. Git tracks the `.csv.gz` twins; the loader reads either.
-NuCLS fold-1 is the locked split.
+The Immunocto patient assignment, per-cell index, and `other`-cell exclusion list are all used by the loader or feature filtering. The NuCLS file contains its locked fold-1 cell assignment. Prognosis fold files preserve the study's five-fold evaluation protocol. The HookNet-TLS and Cell-niches `patches.csv` files preserve the selected tile/FOV geometry. Do not regenerate these files when reproducing the reported evaluation.
 
-Case-table builders (not the paper rerun): `build_tcga_coad_split.py`,
-`build_luad_cv5_os_balanced.py`, `canonicalize_immunocto_split.py`.
+For HookNet-TLS tile geometry, counts, and local patch preparation, see [`tls_region_segmentation/hooknet_tls/README.md`](tls_region_segmentation/hooknet_tls/README.md).

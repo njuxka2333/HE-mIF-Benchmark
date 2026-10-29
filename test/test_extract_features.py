@@ -1,4 +1,4 @@
-"""End-to-end patch extraction via feature_extraction/extract_features_fp.py (production code path)."""
+"""End-to-end patch extraction through the feature extraction engine."""
 
 from __future__ import annotations
 

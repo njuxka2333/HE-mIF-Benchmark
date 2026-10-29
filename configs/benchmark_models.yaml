@@ -315,7 +315,7 @@ models:
 
 output_layouts:
   prepath_legacy:
-    description: "Original PrePATH feature_extraction/run_fp_fast.py layout"
+    description: "Original PrePATH feature bag directory layout"
     paths:
       features: "{feat_dir}/pt_files/{model}/{slide_id}.pt"
       coords: "{feat_dir}/h5_files/{model}/{slide_id}.h5"

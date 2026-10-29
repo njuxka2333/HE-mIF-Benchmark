@@ -4,7 +4,7 @@
 Outputs (under ``--dataset-root``):
 
 - ``pathocell_hdf/<stem>.hdf`` with ``img``, ``gt_inst``, ``gt_ct_coarse``
-- ``splits/cell_semantic_seg/lizard_split.csv`` (sample_name, train_test_val_split)
+- ``splits/cell_semantic_segmentation/lizard/slide_split.csv`` (sample_name, train_test_val_split)
 - ``lizard_label_dict.json``
 - ``lizard_preprocessing_report.json``
 
@@ -270,7 +270,7 @@ def main() -> None:
         split_rows.append((f"{stem}.hdf", split))
 
     if not args.dry_run and split_rows:
-        split_csv = SPLITS_ROOT / "cell_semantic_seg" / "lizard_split.csv"
+        split_csv = SPLITS_ROOT / "cell_semantic_segmentation" / "lizard" / "slide_split.csv"
         split_csv.parent.mkdir(parents=True, exist_ok=True)
         with split_csv.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)

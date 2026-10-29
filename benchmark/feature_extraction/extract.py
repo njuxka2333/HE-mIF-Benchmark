@@ -1,30 +1,19 @@
-"""Unified Pre_Features extraction entry.
+"""Unified feature extraction entry point.
 
-One CLI for Immunocto / NuCLS / TCGA bags. Config
-(``configs/extraction/protocol.yaml`` + experiment YAML) chooses layers,
-geometry, and the train/valid/test or 5-fold layout.
-
-    python -m feature_extraction.extract --config configs/experiments/abmil_tcga_coad_rosie_40x_s128.yaml
-    python -m feature_extraction.extract --dataset tcga_coad --model rosie --layers all
-    python -m feature_extraction.extract --config ... --layers encoder
-
-``python -m feature_extraction.extract_features_fp`` still works; it uses
-this same path and writes the protocol directory. TCGA ``wsi_cv`` bags are
-placed into ``fold_*``. Default layers for that legacy entry are YAML
-``target_features`` only; this module defaults to encoder+output.
+Experiment YAML chooses the dataset, model layers, geometry, and output layout.
+TCGA cross-validation bags are placed into ``fold_*`` after extraction.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
-import sys
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Sequence
 
-from feature_extraction.place_splits import (
+from feature_extraction.fold_placement import (
     cleanup_unique_wsi_files,
     place_layer,
     wsi_bag_complete,
@@ -43,10 +32,10 @@ from feature_extraction.protocol import (
 from utils.experiment_config import EXPERIMENTS_DIR, ExperimentConfig, load_experiment_config
 
 
-def _engine():
-    import feature_extraction.extract_features_fp as extract_features_fp
+def _feature_engine():
+    from feature_extraction import engine
 
-    return extract_features_fp
+    return engine
 
 
 def _find_experiment_yaml(dataset: str, model: str) -> Path:
@@ -86,7 +75,9 @@ def apply_protocol_layers(
     mapping = protocol_layer_feat_dirs(run_root, exp.model, layers, proto)
     exp.target_features = list(layers)
     exp.feat_dir = mapping[layers[0]]
-    exp.feat_dir_base = run_root
+    # Split layouts are relative to the first configured layer directory
+    # (which becomes feat_dir), not the parent run directory.
+    exp.feat_dir_base = mapping[layers[0]]
     if len(layers) > 1:
         exp.split_layer_feat_dirs = True
         exp.layer_feat_dirs = mapping
@@ -106,17 +97,18 @@ def _yaml_extract_block(config_path: Path) -> dict[str, Any]:
 
 def _apply_extract_runtime(yaml_extract: dict[str, Any]) -> None:
     """YAML ``extract.env`` plus the frozen H-optimus-0 skip of MIPHEI LoRA weights."""
+    os.environ.pop("MIPHEI_SKIP_GENERATOR_CKPT", None)
     env = yaml_extract.get("env")
     if isinstance(env, dict):
         for key, value in env.items():
             os.environ[str(key)] = "" if value is None else str(value)
-    from feature_extraction.hoptimus0 import frozen_hoptimus_requested, install_frozen_encoder
+    from feature_extraction.frozen_hoptimus import frozen_hoptimus_requested, configure_frozen_hoptimus
 
     if frozen_hoptimus_requested():
-        install_frozen_encoder()
+        configure_frozen_hoptimus()
 
 
-def _build_parser(default_layers: str) -> argparse.ArgumentParser:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Extract features into the Pre_Features protocol layout"
     )
@@ -127,7 +119,7 @@ def _build_parser(default_layers: str) -> argparse.ArgumentParser:
         "--layers",
         default=None,
         help="encoder, output, all, yaml, or comma-separated layer names. "
-        f"Default: {default_layers}",
+        "Default: layers listed in the experiment YAML, otherwise all.",
     )
     parser.add_argument("--batch_size", type=int, default=None)
     parser.add_argument("--num-workers", type=int, default=None)
@@ -194,15 +186,14 @@ def _install_fold_complete_check(engine, layer_roots: Sequence[Path], model: str
 
     def _is_complete_output(exp, sample_id, model_name=None):
         name = model_name or getattr(exp, "model", model)
-        for root in layer_roots:
-            if wsi_bag_complete(Path(root), str(name), str(sample_id)):
-                return True
+        if all(
+            wsi_bag_complete(Path(root), str(name), str(sample_id))
+            for root in layer_roots
+        ):
+            return True
         return bool(orig(exp, sample_id, model_name) if model_name is not None else orig(exp, sample_id))
 
     engine._is_complete_output = _is_complete_output
-    bytecode = sys.modules.get("_bytecode_extract_features_fp")
-    if bytecode is not None:
-        bytecode._is_complete_output = _is_complete_output
 
 
 def _run_engine(
@@ -212,7 +203,7 @@ def _run_engine(
     wsi_cv: bool,
     ds=None,
 ) -> int:
-    engine = _engine()
+    engine = _feature_engine()
     device_mod = __import__("torch")
     device = device_mod.device("cuda" if device_mod.cuda.is_available() else "cpu")
     cli_split = args.split
@@ -280,8 +271,8 @@ def _place_and_cleanup(exp: ExperimentConfig, layer_roots: Sequence[Path], *, pl
         )
 
 
-def main(argv: Sequence[str] | None = None, *, default_layers: str = "all") -> int:
-    parser = _build_parser(default_layers)
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = _build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
     if args.protocol:
         set_protocol_yaml(args.protocol)
@@ -296,7 +287,7 @@ def main(argv: Sequence[str] | None = None, *, default_layers: str = "all") -> i
     _apply_extract_runtime(yaml_extract)
     layer_token: Any = args.layers
     if layer_token is None:
-        layer_token = yaml_extract.get("layers", default_layers)
+        layer_token = yaml_extract.get("layers", "all")
     layers = parse_layer_tokens(layer_token, exp.model, yaml_layers=exp.target_features)
     if not layers:
         raise SystemExit("No layers resolved for extraction")
@@ -327,7 +318,7 @@ def main(argv: Sequence[str] | None = None, *, default_layers: str = "all") -> i
         selection_tmp = write_unique_selection_csv(ds, Path(tmp.name))
         args.selection_csv = selection_tmp
 
-    engine = _engine()
+    engine = _feature_engine()
     if wsi_cv:
         _install_fold_complete_check(engine, layer_roots, exp.model)
 

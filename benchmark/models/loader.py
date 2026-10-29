@@ -27,7 +27,7 @@ def load_model_from_config(
     aliases = {"hemmit": "hemit", "miphei": "mipheivit"}
     name = aliases.get(name, name)
     cfg = get_model_config(model_name, config_path)
-    from feature_extraction.hoptimus0 import frozen_hoptimus_requested
+    from feature_extraction.frozen_hoptimus import frozen_hoptimus_requested
 
     skip_generator = name == "mipheivit" and frozen_hoptimus_requested()
     ckpt = None if name == "uni2" or skip_generator else resolve_model_checkpoint(

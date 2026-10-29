@@ -51,73 +51,26 @@ def test_pathocell_loss_can_disable_distributed_sync_for_rank0_evaluation():
     criterion.distributed_sync = False
     logits = torch.randn(1, 2, 8, 8)
     target = torch.ones(1, 8, 8, dtype=torch.long)
-    with patch("training.losses.dist.is_initialized", return_value=True), patch(
-        "training.losses.dist.all_reduce", side_effect=AssertionError("unexpected collective")
+    with patch("losses.dist.is_initialized", return_value=True), patch(
+        "losses.dist.all_reduce", side_effect=AssertionError("unexpected collective")
     ):
         loss = criterion(logits, target)
     assert torch.isfinite(loss)
 
 
-def test_classification_epoch_instrumentation_preserves_weights_and_rng():
-    from pathlib import Path
+def test_training_rng_state_roundtrip():
+    import random
 
-    from training.config import EvalConfig
-    from heads import ClassificationAttentionMIL
-    from training.offline_train import (
-        _instrument_classification_epoch,
-        _restore_rng_state,
-        _rng_state,
-        set_seed,
-    )
-
-    cfg = EvalConfig(
-        id="instrumentation_test",
-        task="classification",
-        dataset="classification_features",
-        head="classification_attention_mil",
-        output_dir=Path("/tmp/instrumentation_test"),
-        data={"label_mapping": {"negative": 0, "positive": 1}},
-    )
-    model = ClassificationAttentionMIL(
-        input_dim=4,
-        hidden_dim=8,
-        embed_dim=4,
-        dropout=0.5,
-        n_classes=2,
-    )
-    loader = [
-        {
-            "features": torch.randn(5, 4),
-            "label": torch.tensor(label),
-            "case_id": f"case_{index}",
-            "label_name": str(label),
-        }
-        for index, label in enumerate([0, 1, 0, 1])
-    ]
-    criterion = torch.nn.CrossEntropyLoss()
-    parameters_before = [parameter.detach().clone() for parameter in model.parameters()]
+    from training.offline_train import _restore_rng_state, _rng_state, set_seed
 
     set_seed(123)
-    rng_before = _rng_state()
-    eval_metrics, trainmode_metrics = _instrument_classification_epoch(
-        model,
-        loader,
-        criterion,
-        torch.device("cpu"),
-        2,
-        cfg,
-    )
-    observed_after = torch.rand(5)
-    _restore_rng_state(rng_before)
-    expected_after = torch.rand(5)
+    state = _rng_state()
+    observed = (random.random(), np.random.random(), torch.rand(4))
+    _restore_rng_state(state)
+    expected = (random.random(), np.random.random(), torch.rand(4))
 
-    assert set(eval_metrics) >= {"auc", "auprc", "f1_macro", "loss"}
-    assert set(trainmode_metrics) >= {"auc", "auprc", "f1_macro", "loss"}
-    assert torch.equal(observed_after, expected_after)
-    assert all(
-        torch.equal(before, after)
-        for before, after in zip(parameters_before, model.parameters(), strict=True)
-    )
+    assert observed[:2] == expected[:2]
+    assert torch.equal(observed[2], expected[2])
 
 
 def test_pure_focal_loss_uses_class_excluded_wrapper_without_ema(tmp_path):
@@ -163,19 +116,19 @@ run:
 def test_feature_unetr_forward_shapes():
     from heads import FeatureUNETR
 
-    layers = ["z0", "z1", "z2"]
+    layers = ["z1", "z2"]
     features = {
-        "z0": torch.randn(2, 8, 64, 64),
         "z1": torch.randn(2, 16, 32, 32),
         "z2": torch.randn(2, 32, 16, 16),
     }
     model = FeatureUNETR(
         feature_layers=layers,
-        in_channels=[8, 16, 32],
-        adapter_channels=[8, 16, 32],
+        in_channels=[16, 32],
+        adapter_channels=[8, 16],
         num_classes=4,
     )
-    out = model(features, output_size=(64, 64))
+    image = torch.randn(2, 3, 64, 64)
+    out = model(features, image=image, output_size=(64, 64))
     assert out.shape == (2, 4, 64, 64)
 
 
@@ -196,7 +149,6 @@ def test_feature_unetr_z0_rgb_with_four_encoder_layers():
         in_channels=[64, 64, 64, 64],
         adapter_channels=[128, 256, 512, 512],
         num_classes=5,
-        use_z0=True,
     )
     out = model(features, image=image, output_size=(224, 224))
     assert out.shape == (2, 5, 224, 224)
@@ -212,7 +164,6 @@ def test_feature_unetr_use_z0_requires_image():
         feature_layers=["z1", "z2", "z3", "z4"],
         in_channels=[32, 32, 32, 32],
         num_classes=3,
-        use_z0=True,
     )
     features = {name: torch.randn(1, 32, 8, 8) for name in model.feature_layers}
     with pytest.raises(ValueError, match="requires an RGB image"):
@@ -504,10 +455,10 @@ def test_pathocell_grid_eval_keeps_full_volume_reference():
     """Regression: overwriting the volume array inside the tile loop only scores tile (0, 0)."""
     import numpy as np
 
-    from data.pathocell_hdf import (
-        PATHOCELL_TILING_MINIMAL,
-        extract_pathocell_tile_triple_at_np,
-        plan_pathocell_tiles,
+    from data.tiling import (
+        PFMB_TILE_PROTOCOL,
+        extract_tile_arrays,
+        plan_tiles,
         tile_top_left,
     )
     from metrics import get_instance_level_labels
@@ -526,26 +477,25 @@ def test_pathocell_grid_eval_keeps_full_volume_reference():
         semantic_hw[y, x] = inst_id
 
     label_dict = {0: "background", 1: "c1", 2: "c2", 3: "c3", 4: "c4"}
-    _, tiles = plan_pathocell_tiles(height, width, tile, protocol=PATHOCELL_TILING_MINIMAL)
+    _, tiles = plan_tiles(height, width, tile, protocol=PFMB_TILE_PROTOCOL)
 
-    def count_instances(*, buggy: bool) -> int:
+    def count_instances() -> int:
         total = 0
-        image_hwc = volume
         for tile_bounds in tiles:
-            src = image_hwc if buggy else volume
-            image_hwc, semantic, instance = extract_pathocell_tile_triple_at_np(
-                src,
+            tile_image, semantic, instance = extract_tile_arrays(
+                volume,
                 semantic_hw,
                 instance_hw,
                 tile_bounds,
                 tile,
                 tile,
-                protocol=PATHOCELL_TILING_MINIMAL,
+                protocol=PFMB_TILE_PROTOCOL,
             )
+            assert tile_image.shape[:2] == (tile, tile)
             oracle = np.stack([(semantic == cls).astype(np.float32) for cls in label_dict])
             y_true, _ = get_instance_level_labels(oracle, semantic, instance, label_dict)
             total += len(y_true)
         return total
 
-    assert count_instances(buggy=True) == 1
-    assert count_instances(buggy=False) == 4
+    assert count_instances() == 4
+    assert not volume.any(), "tiling must not mutate the source volume"

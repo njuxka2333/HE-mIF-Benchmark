@@ -22,8 +22,8 @@ if str(ROOT) not in sys.path:
 
 from utils.paths import SPLITS_ROOT  # noqa: E402
 
-LUAD_DIR = SPLITS_ROOT / "prognosis_os"
-SRC = LUAD_DIR / "tcga_luad_split.csv"
+LUAD_DIR = SPLITS_ROOT / "prognosis" / "tcga_luad"
+SRC = LUAD_DIR / "slide_split.csv"
 N_FOLDS = 5
 SEED = 42
 N_TIME_BINS = 4
@@ -105,7 +105,7 @@ def write_folds(df: pd.DataFrame, patients: pd.DataFrame, assignments: dict[str,
         out = df.copy()
         test_cases = {cid for cid, f in assignments.items() if f == fold}
         out["split"] = np.where(out["case_id"].isin(test_cases), "test", "train")
-        path = LUAD_DIR / f"tcga_luad_split_cv5_os_balanced_fold{fold}.csv"
+        path = LUAD_DIR / f"fold_{fold}.csv"
         out.to_csv(path, index=False)
         rec = {
             "fold": fold,
@@ -154,7 +154,7 @@ def main() -> None:
         "n_events": int(patients["event"].sum()),
         "folds": folds,
     }
-    man_path = LUAD_DIR / "tcga_luad_split_cv5_os_balanced_manifest.json"
+    man_path = LUAD_DIR / "manifest.json"
     man_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {man_path}", flush=True)
 

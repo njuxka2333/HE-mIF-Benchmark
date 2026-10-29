@@ -12,7 +12,7 @@ PREPATH_ROOT = Path(__file__).resolve().parent.parent
 def test_build_tcga_coad_cv_splits_counts(tmp_path):
     from scripts.build_tcga_coad_cv_splits import build_cv_splits
 
-    base = Path("/data3/houjunlin/fxx/HE-mIF-Benchmark/splits/prognosis_os/tcga_coad_split.csv")
+    base = PREPATH_ROOT / "splits/prognosis/tcga_coad/slide_split.csv"
     if not base.is_file():
         return
 
@@ -54,7 +54,7 @@ def test_resolve_prognosis_cv_split_csv():
     folds = _cross_validation_folds(cfg)
     assert folds == [0, 1, 2, 3, 4]
     resolved = _resolve_cv_split_csv(cfg, 0)
-    assert resolved.endswith("tcga_coad_split_shazam_fold0.csv")
+    assert resolved.endswith("fold_0.csv")
     assert Path(resolved).is_file()
     assert cfg.data.get("valid_split") == "valid"
     assert cfg.data.get("test_split") == "test"
@@ -72,7 +72,6 @@ def test_run_survival_uses_shared_cv_orchestrator(monkeypatch, tmp_path):
         return {"seed": 42.0, "valid_c_index": 0.5}
 
     monkeypatch.setattr(offline_train, "_run_survival_once", fake_once)
-    monkeypatch.setattr(offline_train._mod, "_run_survival_once", fake_once)
     cfg = EvalConfig(
         id="cv-test",
         task="prognosis_survival",
@@ -80,12 +79,12 @@ def test_run_survival_uses_shared_cv_orchestrator(monkeypatch, tmp_path):
         head="survival_attention_mil",
         output_dir=tmp_path,
         data={
-            "split_csv": "/data3/houjunlin/fxx/HE-mIF-Benchmark/splits/prognosis_os/tcga_coad_split.csv",
+            "split_csv": str(PREPATH_ROOT / "splits/prognosis/tcga_coad/slide_split.csv"),
             "cross_validation": {
                 "enabled": True,
                 "folds": [0, 1],
-                "split_csv_pattern": "tcga_coad_split_shazam_fold{fold}.csv",
-                "split_csv_dir": "/data3/houjunlin/fxx/HE-mIF-Benchmark/splits/prognosis_os",
+                "split_csv_pattern": "fold_{fold}.csv",
+                "split_csv_dir": str(PREPATH_ROOT / "splits/prognosis/tcga_coad"),
             },
         },
         head_config={},

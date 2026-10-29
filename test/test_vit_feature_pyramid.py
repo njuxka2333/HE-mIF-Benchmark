@@ -164,8 +164,8 @@ def test_build_segmentation_head_accepts_feature_processor_config():
 def test_vit_configs_enable_shared_processor_with_task_specific_decoders():
     root = Path(__file__).resolve().parents[1] / "configs" / "downstream"
     expected = {
-        "tls/encoder/uni2.yaml": ("feature", "bilinear_pyramid"),
-        "cellseg/pathocell/encoder/uni2.yaml": ("pfmb", None),
+        "tls_region_segmentation/hooknet_tls/encoder/uni2.yaml": ("feature", "bilinear_pyramid"),
+        "cell_semantic_segmentation/pathocell/encoder/uni2.yaml": ("pfmb", None),
     }
     for filename, (decoder_mode, processor_name) in expected.items():
         config = yaml.safe_load((root / filename).read_text(encoding="utf-8"))
@@ -179,7 +179,7 @@ def test_miphei_cell_pfmb_passes_online_and_offline_task_guards():
         Path(__file__).resolve().parents[1]
         / "configs"
         / "downstream"
-        / "cellseg"
+        / "cell_semantic_segmentation"
         / "pathocell"
         / "encoder"
         / "uni2.yaml"

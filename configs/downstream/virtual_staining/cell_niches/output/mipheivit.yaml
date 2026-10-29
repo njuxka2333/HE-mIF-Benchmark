@@ -21,7 +21,6 @@ training:
   significance: true  # CD3 shuffle-null (Spearman + AUPRC) and FOV-bootstrap AUPRC
   seed: 42
   batch_size: 4
-  num_previews: 12
 run:
   output_dir: ../Evaluation/virtual_staining/cell_niches/output/mipheivit
   script: training.train

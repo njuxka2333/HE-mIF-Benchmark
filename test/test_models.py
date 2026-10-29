@@ -13,7 +13,7 @@ from conftest import MODELS, ensure_model_weights, local_checkpoint_path
 def test_model_forward(model, device):
     from utils.experiment_config import ExtractionTask
     from models.registry import load_benchmark_registry
-    from feature_extraction.extractor import build_feature_extractor
+    from feature_extraction.feature_extractor import build_feature_extractor
     from feature_extraction.layers import MODEL_LAYER_NAMES
     from models.loader import load_model_from_config
 

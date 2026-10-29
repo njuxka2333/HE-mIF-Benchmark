@@ -113,7 +113,13 @@ def get_model(
         use_lora = _env_flag("MIPHEI_USE_LORA", True)
 
     net = get_mipheivit(str(name), int(size), int(classes), use_lora=bool(use_lora))
-    _load_checkpoint(net, ckpt_path)
+    if _env_flag("MIPHEI_SKIP_GENERATOR_CKPT", False):
+        print(
+            "H-optimus-0 encoder route: skipping MIPHEI generator/LoRA checkpoint",
+            flush=True,
+        )
+    else:
+        _load_checkpoint(net, ckpt_path)
     model = MIPHEIWrapper(net)
     return model.to(device).eval()
 

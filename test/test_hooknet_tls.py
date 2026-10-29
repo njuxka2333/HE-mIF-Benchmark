@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from data.hooknet_tls import (
+from data.hooknet_tls.planning import (
     DEFAULT_PATCH_SIZE_L0,
     PatchPlanRecord,
     apply_manifest_selection,

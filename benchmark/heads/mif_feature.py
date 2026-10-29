@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 
 from heads import FeatureUNETR
-from mif.resample import resample_mif_stack
+from utils.marker_stack import resample_mif_stack
 from heads.mif_unet import DEFAULT_FEATURE_LAYERS, TimmPyramidEncoder
 from models.mif_output import FrozenMifGenerator
 

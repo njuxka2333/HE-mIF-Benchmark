@@ -77,7 +77,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--split-csv",
-        default="/data3/houjunlin/fxx/HE-mIF-Benchmark/splits/prognosis_os/tcga_coad_split.csv",
+        default=str(Path(__file__).resolve().parents[2] / "splits/prognosis/tcga_coad/slide_split.csv"),
     )
     parser.add_argument(
         "--cdr-xlsx",

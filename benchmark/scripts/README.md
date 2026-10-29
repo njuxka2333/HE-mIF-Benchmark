@@ -1,20 +1,11 @@
-# `scripts/`
+# Dataset preparation
 
-These are **split-table and dataset-prep helpers**, not the paper rerun.
-A clone should use:
+Prepare the local image and patch assets used by the benchmark through the dataset entry point:
 
 ```bash
-python -m preprocessing.build --dataset …
-python -m feature_extraction.extract …
-python -m training.pipeline --task …
+python -m preprocessing.build --dataset hooknet_tls
+python -m preprocessing.build --dataset lizard
+python -m preprocessing.build --dataset immunocto
 ```
 
-`preprocessing.build` already calls `build_lizard_pathocell_hdf.py` and
-`build_immunocto_webdataset.py` for those dataset names.
-
-| Script | When you would run it |
-|--------|------------------------|
-| `build_tcga_coad_split.py`, `build_tcga_coad_cv_splits.py`, `build_luad_cv5_os_balanced.py` | Recut a frozen case table (do not do this for a paper rerun) |
-| `canonicalize_immunocto_split.py`, `place_immunocto.py` | Rebuild the leakage-free Immunocto placement after a new extract |
-| `cut_cell_niches_paired_patches.py`, `rescore_vstain_from_4um_cache.py` | One-off VS catalog / cache work |
-| `build_hooknet_tls.py`, `rebuild_hooknet_tls.py` | Older TLS grid builders; official TLS tiles come from `preprocessing.build --dataset hooknet_tls` |
+Use the frozen assignments and catalogs in `splits/` for reproduction. Split CSVs are inputs to the benchmark protocol; rebuilding them changes the evaluation and is not part of a standard rerun. See the repository [`README.md`](../../README.md) for dataset setup and task commands.
